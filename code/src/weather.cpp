@@ -7,8 +7,15 @@
 //#include <Fonts/FreeSerifBold12pt7b.h>
 
 uint8_t forecast5Days[5] = {0,0,0,0,0};
+uint8_t minTemp[5] = {0,0,0,0,0};
+uint8_t maxTemp[5] = {0,0,0,0,0};
 int8_t minTempToday = 0;
 int8_t maxTempToday = 0;
+bool weatherFailed = false;
+int failCount = 0;
+
+
+
 
 
 //Source: http://www.newdesignfile.com/post_pixelated-graphic-arts_325919/
@@ -136,6 +143,11 @@ uint16_t color565(uint32_t rgb) {
     ((rgb & 0xFF) >> 3);
 };
 
+/* Hacky workaround to avoid conversion to color565
+uint16_t color565(uint32_t rgb) {
+  return rgb;
+}; */
+
 void drawTestBitmap() {
   /*drawBitmap(BITMAP_X, BITMAP_Y, 8, 8, sun_8x8);
   drawBitmap(BITMAP_X+9, BITMAP_Y, 8, 8, cloud_8x8);
@@ -143,7 +155,7 @@ void drawTestBitmap() {
   drawBitmap(BITMAP_X+27, BITMAP_Y, 8, 8, showers_8x8);
   drawBitmap(BITMAP_X+36, BITMAP_Y, 8, 8, snow_8x8);
   drawBitmap(BITMAP_X+45, BITMAP_Y, 8, 8, storm_8x8);*/
-  drawBitmap(BITMAP_X+58, BITMAP_Y, 12, 20, minion);
+  //drawBitmap(BITMAP_X+58, BITMAP_Y, 12, 20, minion);
 }
 
 // Draw one of the available weather icons in the specified space
@@ -176,22 +188,31 @@ void displayTodaysWeather() {
 }
 
 void displayTodaysTempRange() {
-  dma_display->fillRect(TEMPRANGE_X, TEMPRANGE_Y, TEMPRANGE_WIDTH, TEMPRANGE_HEIGHT, 0);
+  dma_display->fillRect(TEMPRANGE_X, TEMPRANGE_Y - 5, TEMPRANGE_WIDTH, TEMPRANGE_HEIGHT, 0);
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
   dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
   dma_display->setTextColor(TEMPRANGE_COLOR);
-
+  dma_display->setFont(&TomThumb);
   dma_display->setCursor(TEMPRANGE_X, TEMPRANGE_Y);   
-  dma_display->printf("%3d/%3d C", minTempToday, maxTempToday);
+  dma_display->printf("%3d/%3d  F", minTempToday, maxTempToday);
   
   // Draw the degree symbol manually
-  dma_display->fillRect(TEMPRANGE_X + 44, TEMPRANGE_Y, 2, 2, TEMPRANGE_COLOR);
+  dma_display->fillRect(TEMPRANGE_X + 24, TEMPRANGE_Y - 5, 2, 2, TEMPRANGE_COLOR);
+  dma_display->setFont();
 }
 
 void displayWeatherForecast() {
+  dma_display->fillRect(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y, 32, 36, 0);
+  dma_display->setFont(&TomThumb);
   for (int i=1; i<5; i++) {  //skip day 0, since we are already displaying it somewhere else using displayTodaysWeather()
-    drawWeatherIcon(WEATHER_FORECAST_X + 9*(i-1), WEATHER_FORECAST_Y, 8, 8, forecast5Days[i], false);
+    //drawWeatherIcon(WEATHER_FORECAST_X + 9*(i-1), WEATHER_FORECAST_Y, 8, 8, forecast5Days[i], false);
+    drawWeatherIcon(WEATHER_FORECAST_X, WEATHER_FORECAST_Y + 9*(i-1), 8, 8, forecast5Days[i], false);
+    dma_display->setCursor(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
+    dma_display->printf("%3d", minTemp[i]);
+    dma_display->setCursor(WEATHER_FORECAST_X + 7, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
+    dma_display->printf("%3d", maxTemp[i]);
   }
+  dma_display->setFont();
 }
 
 void displayWeatherData() {
@@ -287,7 +308,7 @@ void getAccuWeatherData() {
 	]
   } */
 
-  snprintf( url, 256, "http://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=%s&metric=true", 
+  snprintf( url, 256, "http://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=%s&metric=false", 
       ACCUWEATHER_CITY_CODE, ACCUWEATHER_API_KEY);
 
   http.begin(url);
@@ -300,6 +321,21 @@ void getAccuWeatherData() {
     Serial.print(F("deserialization failed: "));
     Serial.println(error.f_str());
     logStatusMessage("Weather data error!");
+    weatherFailed = true;
+    failCount++;
+    
+  }
+  if (!error) {
+    logStatusMessage("Weather success!");
+    weatherFailed = false;
+    failCount = 0;
+    
+  }
+  if (weatherFailed && failCount > 3)
+  {
+    delay(5000);
+    logStatusMessage("Weather trying again");
+    getAccuWeatherData();
   }
 
   doc.shrinkToFit();
@@ -316,6 +352,10 @@ void getAccuWeatherData() {
 
   for (int i=0; i<5; i++) {
     forecast5Days[i] = accuWeatherIconMapping(doc["DailyForecasts"][i]["Day"]["Icon"]);
+  }
+  for (int i=0; i<5; i++) {
+    minTemp[i] = round( double(doc["DailyForecasts"][i]["Temperature"]["Minimum"]["Value"]) );
+    maxTemp[i] = round( double(doc["DailyForecasts"][i]["Temperature"]["Maximum"]["Value"]) );
   }
 }
 

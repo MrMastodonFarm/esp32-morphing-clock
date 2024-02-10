@@ -4,6 +4,8 @@
 #include <Arduino.h>
 
 void displaySensorData();
+void displayTrainData();
+void displayCalendarData();
 void drawTestBitmap();
 void displayTodaysWeather();
 void displayWeatherForecast();

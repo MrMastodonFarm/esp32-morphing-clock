@@ -43,11 +43,15 @@ void setup(){
 
   pinMode(BUTTON1_PIN, INPUT_PULLUP);
 
-  logStatusMessage("Buzzer setup");
+ /* logStatusMessage("Buzzer setup");
   buzzer_init();
-  buzzer_tone(500, 300);
+  buzzer_tone(500, 300);  */
   displayTest(300);
-  
+// Set ESP32 host name
+  String hostname = "MorphingClock";
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
+  WiFi.setHostname(hostname.c_str()); //define hostname
+
   logStatusMessage("Connecting to WiFi...");
   Serial.print("Connecting to ");
   Serial.println(WIFI_SSID);
@@ -61,7 +65,7 @@ void setup(){
   logStatusMessage("WiFi connected!");
 
   logStatusMessage("NTP time...");
-  configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "ro.pool.ntp.org");
+  configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
   lastNTPUpdate = millis();
   logStatusMessage("NTP done!");
 
@@ -84,27 +88,28 @@ void setup(){
   lastStatusSend = 0;
   logStatusMessage("MQTT done!");
 
-  logStatusMessage("Initialize TSL...");
+ /* logStatusMessage("Initialize TSL...");
   tslConfigureSensor();
-  logStatusMessage("TSL done!");
+  logStatusMessage("TSL done!"); */
 
   logStatusMessage("Setting up watchdog...");
   esp_task_wdt_init(WDT_TIMEOUT, true);
   esp_task_wdt_add(NULL);
   logStatusMessage("Woof!");
-
-  //logStatusMessage(WiFi.localIP().toString());
+ 
+  logStatusMessage(WiFi.localIP().toString());
   drawTestBitmap();
   displayWeatherData();
   
+  CJBMessage("Go Team Chrob!");
   displayTicker.attach_ms(30, displayUpdater);
   
-  buzzer_tone(1000, 300);
+  //buzzer_tone(1000, 300);
 }
 
 uint8_t wheelval = 0;
 void loop() {
-  if (WiFi.status() != WL_CONNECTED) {
+   if (WiFi.status() != WL_CONNECTED) {
     logStatusMessage("WiFi lost!");
     WiFi.reconnect();
   }
@@ -112,7 +117,7 @@ void loop() {
   if ( !client.connected() ) {
     logStatusMessage("MQTT lost");
     reconnect();
-  }
+  } 
   client.loop();
 
   // Periodically refresh NTP time
@@ -130,15 +135,16 @@ void loop() {
     lastWeatherUpdate = millis();
   }
 
-  if (digitalRead(BUTTON1_PIN) == LOW) {
+  /* if (digitalRead(BUTTON1_PIN) == LOW) {
     logStatusMessage("Yess... push it again!!");
-  }
+  } */
 
   //Do we need to clear the status message from the screen?
   if (logMessageActive) {
     if (millis() > messageDisplayMillis + LOG_MESSAGE_PERSISTENCE_MSEC) {
       clearStatusMessage();
       drawTestBitmap();
+      CJBMessage("Go Team Chrob!");
     }
   }
 
@@ -148,7 +154,16 @@ void loop() {
     displaySensorData();
     displayTodaysWeather();
   }
-
+  // Do we have new train data?
+  if (newTrainData) {
+    //logStatusMessage("Sensor data in");
+    displayTrainData();
+  }
+  //Do we have new calendar data?
+    if (newCalendarData) {
+    //logStatusMessage("Sensor data in");
+    displayCalendarData();
+  }
   // Is the sensor data too old?
   if (millis() - lastSensorRead > 1000*SENSOR_DEAD_INTERVAL_SEC) {
     sensorDead = true;
@@ -157,11 +172,11 @@ void loop() {
   }
 
   heartBeat = !heartBeat;
-  drawHeartBeat();
+  /* drawHeartBeat();
   if (millis() - lastLightRead > 1000*LIGHT_READ_INTERVAL_SEC) {
     lightUpdate();
     //displayTodaysWeather();
-  } 
+  } */
 
   //Reset the watchdog timer as long as the main task is running
   esp_task_wdt_reset();
@@ -181,13 +196,13 @@ void displayUpdater() {
   }
 }
 
-void lightUpdate() {
+/* void lightUpdate() {
   float tslData = tslGetLux();
   lastLightRead = millis();
   if ((tslData >=0 ) && (tslData <= LIGHT_THRESHOLD)) {
     displayLightData(tslData);
-  }
-}
+  } 
+} */
 
 //TODO: http://www.rinkydinkelectronics.com/t_imageconverter565.php
 
