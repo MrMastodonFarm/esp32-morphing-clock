@@ -2,6 +2,6 @@
 #define MAIN_H
 
 void displayUpdater();
-void lightUpdate();
+//void lightUpdate();
 
 #endif

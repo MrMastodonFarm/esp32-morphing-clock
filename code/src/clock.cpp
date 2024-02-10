@@ -26,31 +26,42 @@ int prevhh = 0;
 
 void displayClock() {
     int hh = timeinfo.tm_hour;
+   // Convert to 12h time (but w/o AM/PM)
+    if (hh >= 13)
+    {
+      hh = hh - 12;
+    }
+  
     int mm = timeinfo.tm_min;
     int ss = timeinfo.tm_sec;
     delay(500);
 
     if (clockStartingUp) { // If we didn't have a previous time. Just draw it without morphing.
-      digit0.Draw(ss % 10);
-      digit1.Draw(ss / 10);
+      //digit0.Draw(ss % 10);
+      //digit1.Draw(ss / 10);
       digit2.Draw(mm % 10);
       digit3.Draw(mm / 10);
       digit4.Draw(hh % 10);
-      digit5.Draw(hh / 10);
-      digit1.DrawColon(CLOCK_DIGIT_COLOR);
+      // Print first hour digit only if it's a 1
+      if (hh > 9)
+      {
+        digit5.Draw(hh / 10);
+      }
+      
+      //digit1.DrawColon(CLOCK_DIGIT_COLOR);
       digit3.DrawColon(CLOCK_DIGIT_COLOR);
       displayDate();
       clockStartingUp = false;
     }
     else {
       // epoch changes every miliseconds, we only want to draw when digits actually change.
-      if (ss!=prevss) { 
+      /* if (ss!=prevss) { 
         int s0 = ss % 10;
         int s1 = ss / 10;
         if (s0!=digit0.Value()) digit0.Morph(s0);
         if (s1!=digit1.Value()) digit1.Morph(s1);
         prevss = ss;
-      }
+      } */
 
       if (mm!=prevmm) {
         int m0 = mm % 10;
@@ -62,6 +73,10 @@ void displayClock() {
       }
       
       if (hh!=prevhh) {
+         if (hh >= 13)
+    {
+      hh = hh - 12;
+    }
         int h0 = hh % 10;
         int h1 = hh / 10;
         if (h0!=digit4.Value()) digit4.Morph(h0);
@@ -82,5 +97,5 @@ void displayDate() {
     dma_display->print(&timeinfo, "%a");
 
     dma_display->setCursor(DATE_X, DATE_Y);
-    dma_display->print(&timeinfo, "%d.%m");
+    dma_display->print(&timeinfo, "%m/%d");
 }

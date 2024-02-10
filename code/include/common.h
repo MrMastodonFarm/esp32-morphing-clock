@@ -49,22 +49,39 @@ extern struct tm timeinfo;
 //Flags to trigger display section updates
 extern bool clockStartingUp;
 extern bool newSensorData;
+extern bool newTrainData;
+extern bool newCalendarData;
 extern bool sensorDead;
 
 //The actual sensor data
 extern float sensorTemp;
 extern int sensorHumi;
+extern int sensorTrain1;
+extern int sensorTrain2;
+extern int sensorTrain3;
+extern int sensorTrain4;
+extern int sensorBlueTrain1;
+extern int sensorBlueTrain2;
+extern int sensorBlueTrain3;
+extern int sensorBlueTrain4;
+extern char sensorNextEvent[65];
+extern int sensorDaysTillNextEvent;
 
 //Just a heartbeat for the watchdog...
 extern bool heartBeat;
 
 //Light sensor
-extern Adafruit_TSL2591 tsl;
+//extern Adafruit_TSL2591 tsl;
 
 //Weather data
 extern uint8_t forecast5Days[5];
 extern int8_t minTempToday;
 extern int8_t maxTempToday;
+extern uint8_t minTemp[5];
+extern uint8_t maxTemp[5];
+
+//OTA update
+extern char updateValue;
 
 #endif
 

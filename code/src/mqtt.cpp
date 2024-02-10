@@ -12,7 +12,6 @@ char mqtt_buffer[MQTT_BUFMAX];
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
-  /*
   Serial.print("Message arrived [");
   Serial.print(topic);
   Serial.print("] ");
@@ -20,7 +19,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-  */
 
   if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
     payload[length]=0;
@@ -29,7 +27,6 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     sensorDead = false;
     newSensorData = true;
   }
-
   if ( strcmp(topic, MQTT_HUMIDITY_SENSOR_TOPIC) == 0) {
     payload[length] = 0;
     sensorHumi = atoi((char *)payload);
@@ -38,10 +35,85 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     newSensorData = true;
   }
 
-  if ( strcmp(topic, MQTT_UPDATE_CMD_TOPIC)==0 ) {
+    if ( strcmp(topic, MQTT_TRAIN1_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorTrain1 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }
+
+    if ( strcmp(topic, MQTT_TRAIN2_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorTrain2 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }
+    if ( strcmp(topic, MQTT_TRAIN3_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorTrain3 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }   if ( strcmp(topic, MQTT_TRAIN4_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorTrain4 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }
+    if ( strcmp(topic, MQTT_BLUE_TRAIN1_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorBlueTrain1 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }
+    if ( strcmp(topic, MQTT_BLUE_TRAIN2_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorBlueTrain2 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }
+    if ( strcmp(topic, MQTT_BLUE_TRAIN3_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorBlueTrain3 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }   
+    if ( strcmp(topic, MQTT_BLUE_TRAIN4_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorBlueTrain4 = atoi((char *)payload);
+    lastSensorRead = millis();
+    newTrainData = true;
+  }
+    if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
+    payload[length]=0;
+    sensorTemp = atof((char *)payload);
+    lastSensorRead = millis();
+    sensorDead = false;
+    newSensorData = true;
+  }
+  if ( strcmp(topic, MQTT_HUMIDITY_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorHumi = atoi((char *)payload);
+    lastSensorRead = millis();
+    sensorDead = false;
+    newSensorData = true;
+  }
+  if ( strcmp(topic, MQTT_NEXT_EVENT_SENSOR_TOPIC ) == 0) {
+    strncpy(sensorNextEvent, (char*)payload, length);
+    sensorNextEvent[length] = '\0';
+    lastSensorRead = millis();
+    newCalendarData = true;
+  } 
+  if ( strcmp(topic, MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC ) == 0) {
+    payload[length] = 0;
+    sensorDaysTillNextEvent = atoi((char *)payload);
+    lastSensorRead = millis();
+    newCalendarData = true; 
+  } 
+    if ( strcmp(topic, MQTT_UPDATE_CMD_TOPIC)==0 ) {
     Serial.println("Starting update process...");
     // Start update if a 1 was received as first character
-    if ((char)payload[0] == '1') {
+    updateValue = (char)payload[0]; // now-superfluous extra step
+    if (updateValue == '1') {
       perform_update();
     }
   }
@@ -67,18 +139,38 @@ void reconnect() {
       Serial.println(MQTT_UPDATE_CMD_TOPIC);
       Serial.println(MQTT_TEMPERATURE_SENSOR_TOPIC);
       Serial.println(MQTT_HUMIDITY_SENSOR_TOPIC);
+      Serial.println(MQTT_TRAIN1_SENSOR_TOPIC);
+      Serial.println(MQTT_TRAIN2_SENSOR_TOPIC);
+      Serial.println(MQTT_TRAIN3_SENSOR_TOPIC);
+      Serial.println(MQTT_TRAIN4_SENSOR_TOPIC);
+      Serial.println(MQTT_BLUE_TRAIN1_SENSOR_TOPIC);
+      Serial.println(MQTT_BLUE_TRAIN2_SENSOR_TOPIC);
+      Serial.println(MQTT_BLUE_TRAIN3_SENSOR_TOPIC);
+      Serial.println(MQTT_BLUE_TRAIN4_SENSOR_TOPIC);
+      Serial.println(MQTT_NEXT_EVENT_SENSOR_TOPIC);
+      Serial.println(MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC);
       Serial.println("... done");
 
       client.subscribe(MQTT_UPDATE_CMD_TOPIC);
       client.subscribe(MQTT_TEMPERATURE_SENSOR_TOPIC);
       client.subscribe(MQTT_HUMIDITY_SENSOR_TOPIC);
+      client.subscribe(MQTT_TRAIN1_SENSOR_TOPIC);
+      client.subscribe(MQTT_TRAIN2_SENSOR_TOPIC);
+      client.subscribe(MQTT_TRAIN3_SENSOR_TOPIC);
+      client.subscribe(MQTT_TRAIN4_SENSOR_TOPIC);
+      client.subscribe(MQTT_BLUE_TRAIN1_SENSOR_TOPIC);
+      client.subscribe(MQTT_BLUE_TRAIN2_SENSOR_TOPIC);
+      client.subscribe(MQTT_BLUE_TRAIN3_SENSOR_TOPIC);
+      client.subscribe(MQTT_BLUE_TRAIN4_SENSOR_TOPIC);
+      client.subscribe(MQTT_NEXT_EVENT_SENSOR_TOPIC);
+      client.subscribe(MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC);
     } else {
-      logStatusMessage("MQTT Fail, retrying...");
+      logStatusMessage("Stop Team Chrob!");
       Serial.print( "[FAILED] [ rc = " );
       Serial.print( client.state() );
       Serial.println( " : retrying in 5 seconds]" );
       // Wait 5 seconds before retrying
       delay( 5000 );
     }
-  }
+  } 
 }

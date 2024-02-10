@@ -29,6 +29,7 @@ void display_init() {
 	_pins // pin mapping
   );
   // mxconfig.gpio.e = E_PIN;
+  mxconfig.clkphase = false;
   mxconfig.driver = HUB75_I2S_CFG::FM6124;
   dma_display = new MatrixPanel_I2S_DMA(mxconfig);
 
@@ -72,9 +73,27 @@ void logStatusMessage(String message) {
   logMessageActive = true;
 }
 
+void CJBMessage(String message) {
+  // Clear the line first!
+  dma_display->fillRect(0, 56, 128, 8, 0);
+
+  dma_display->setTextSize(1);     // size 1 == 8 pixels high
+  dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+
+  dma_display->setCursor(0, 56);   // Write on last line
+
+  dma_display->setTextColor(dma_display->color444(255,0,0));
+  dma_display->print(message);
+
+  messageDisplayMillis = millis();
+  logMessageActive = true;
+}
+
+
 void clearStatusMessage() {
    dma_display->fillRect(0, 56, 128, 8, 0); 
    logMessageActive = false;
+   CJBMessage("Go Team Chrob!"); //refresh GTC after the status message goes away
 }
 
 void displaySensorData() {
@@ -93,19 +112,57 @@ void displaySensorData() {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setTextColor(SENSOR_DATA_COLOR);
-//    dma_display->setFont(&FreeSerifBold12pt7b);
-
-    dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y);   
-    dma_display->printf("%4.1f C           %3d%%", sensorTemp, sensorHumi);
+    dma_display->setFont(&TomThumb);
+    dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y+5);   
+    dma_display->printf("%3.0f  F %3d%%", sensorTemp, sensorHumi);
     
     // Draw the degree symbol manually
-    dma_display->fillRect(SENSOR_DATA_X + 25, SENSOR_DATA_Y, 2, 2, SENSOR_DATA_COLOR);
-    
+    dma_display->fillRect(SENSOR_DATA_X + 11, SENSOR_DATA_Y, 2, 2, SENSOR_DATA_COLOR);
+   
+    dma_display->setFont();
     newSensorData = false;
   }
 }
+void displayTrainData() {
+  if (newTrainData) {
+    //displayCalendarData(); // Testing--this assures that displayCalendarData runs
+    dma_display->setTextSize(1);     // size 1 == 8 pixels high
+    dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+    dma_display->setFont(&TomThumb);
+    //Yellow Line
+    dma_display->fillRect(TRAIN_DATA_X, TRAIN_DATA_Y, TRAIN_DATA_WIDTH, TRAIN_DATA_HEIGHT, 0);
+    dma_display->fillCircle(TRAIN_DATA_X+2, TRAIN_DATA_Y+2, 2, 0xFE80); //yellow circle to identify Yellow Line
+    dma_display->setCursor(TRAIN_DATA_X+8, TRAIN_DATA_Y+5);   //Y offset because custom fonts draw from bottom instead of top
+    dma_display->setTextColor(TRAIN_DATA_COLOR);
+    dma_display->printf("%d %d %d %d", sensorTrain1, sensorTrain2, sensorTrain3, sensorTrain4);
+    //Blue Line
+    dma_display->fillRect(TRAIN_DATA_X, TRAIN_DATA_Y+7, TRAIN_DATA_WIDTH, TRAIN_DATA_HEIGHT, 0);
+    dma_display->fillCircle(TRAIN_DATA_X+2, TRAIN_DATA_Y+9, 2, 0x04FB); //blue circle to identify Blue Line
+    dma_display->setCursor(TRAIN_DATA_X+8, TRAIN_DATA_Y+12);   //Y offset because custom fonts draw from bottom instead of top
+    dma_display->setTextColor(0x04FB);
+    dma_display->printf("%d %d %d %d", sensorBlueTrain1, sensorBlueTrain2, sensorBlueTrain3, sensorBlueTrain4); 
 
-void displayLightData(float luxValue) {
+    dma_display->setFont();
+    newTrainData = false;
+  }
+}
+void displayCalendarData() {
+  Serial.println("Running displayCalendarData");
+  if (newCalendarData) {
+    //if (1 == 1) {
+    dma_display->setTextSize(1);     // size 1 == 8 pixels high
+    dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+    //dma_display->setFont();
+    dma_display->fillRect(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y, MESSAGE_LINE_1_WIDTH, MESSAGE_LINE_1_HEIGHT, 0);
+    dma_display->setCursor(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y);
+    dma_display->setTextColor(MESSAGE_LINE_1_COLOR);
+    dma_display->print(sensorNextEvent); 
+    dma_display->printf(" -%3d days", sensorDaysTillNextEvent);
+    //Serial.println(sensorNextEvent);
+    newCalendarData = false; 
+  }
+}
+/* void displayLightData(float luxValue) {
   dma_display->fillRect(LIGHT_DATA_X, LIGHT_DATA_Y, LIGHT_DATA_WIDTH, LIGHT_DATA_HEIGHT, 0);
   
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
@@ -117,7 +174,7 @@ void displayLightData(float luxValue) {
   dma_display->printf("%4.1f lx", luxValue);
     
 
-}
+} */
 
 void displayForecastData() {
 
@@ -131,5 +188,7 @@ void displayTest(int delayMs) {
   delay(delayMs);
   dma_display->fillRect(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT, dma_display->color565(0, 0, 255));
   delay(delayMs);
+  //dma_display->fillRect(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT, dma_display->color565(255, 255, 255));
+  //delay(delayMs);
   dma_display->fillRect(0, 0, MATRIX_WIDTH, MATRIX_HEIGHT, dma_display->color565(0, 0, 0));
 }

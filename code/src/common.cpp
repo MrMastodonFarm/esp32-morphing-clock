@@ -37,6 +37,8 @@ MatrixPanel_I2S_DMA *dma_display = nullptr;
 // Flags to trigger display updates
 bool clockStartingUp = true;
 bool newSensorData = false;
+bool newTrainData = false;
+bool newCalendarData = false;
 bool sensorDead = true;
 
 //Heartbeat marker
@@ -51,3 +53,16 @@ unsigned long messageDisplayMillis = 0;
 // Sensor data
 float sensorTemp;
 int sensorHumi;
+int sensorTrain1;
+int sensorTrain2;
+int sensorTrain3;
+int sensorTrain4;
+int sensorBlueTrain1;
+int sensorBlueTrain2;
+int sensorBlueTrain3;
+int sensorBlueTrain4;
+char sensorNextEvent[];
+int sensorDaysTillNextEvent;
+
+// OTA update
+char updateValue;
