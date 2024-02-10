@@ -72,8 +72,8 @@ void displayClock() {
         prevmm = mm;
       }
       
-      if (hh!=prevhh) {
-         if (hh >= 13)
+      if (hh!=prevhh) { 
+         if (hh >= 13) //code to display time in 12h rather than 24h format.  Doesn't suppress the zero when flipping over from 12.
     {
       hh = hh - 12;
     }

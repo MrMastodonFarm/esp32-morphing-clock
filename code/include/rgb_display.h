@@ -24,7 +24,6 @@
 #define R1_PIN 25
 #define G1_PIN 27
 #define B1_PIN 26
-//GND
 #define R2_PIN 14
 #define G2_PIN 13
 #define B2_PIN 12
@@ -58,9 +57,9 @@ JTAG: 15 14 13 12
 #define NUM_LEDS PANEL_WIDTH*PANEL_HEIGHT
 
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
-#include <Fonts/Picopixel.h>
-#include <Fonts/Org_01.h>
-#include <Fonts/Tiny3x3a2pt7b.h>
+//#include <Fonts/Picopixel.h>  //Smaller fonts not currently used
+//#include <Fonts/Org_01.h>
+//#include <Fonts/Tiny3x3a2pt7b.h>
 #include <Fonts/TomThumb.h>
 
 uint16_t colorWheel(uint8_t pos); 
@@ -74,7 +73,6 @@ void clearStatusMessage();
 void displaySensorData();
 void displayTrainData();
 void displayCalendarData();
-//void displayLightData(float luxValue);
 void displayTest(int delayMs);
 
 #endif

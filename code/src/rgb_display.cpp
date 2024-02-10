@@ -93,7 +93,7 @@ void CJBMessage(String message) {
 void clearStatusMessage() {
    dma_display->fillRect(0, 56, 128, 8, 0); 
    logMessageActive = false;
-   CJBMessage("Go Team Chrob!"); //refresh GTC after the status message goes away
+   CJBMessage("Go Team Chrob!"); //refresh silly inside joke after the status message goes away
 }
 
 void displaySensorData() {
@@ -125,7 +125,6 @@ void displaySensorData() {
 }
 void displayTrainData() {
   if (newTrainData) {
-    //displayCalendarData(); // Testing--this assures that displayCalendarData runs
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setFont(&TomThumb);
