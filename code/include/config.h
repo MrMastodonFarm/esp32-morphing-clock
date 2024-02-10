@@ -13,7 +13,7 @@
 #define TIMEZONE_DST_SEC 3600
 
 // How long are informational messages kept on screen
-#define LOG_MESSAGE_PERSISTENCE_MSEC 30000
+#define LOG_MESSAGE_PERSISTENCE_MSEC 15000
 
 // How long do we consider the sensor data valid before declaring the sensor dead
 #define SENSOR_DEAD_INTERVAL_SEC 600
@@ -91,7 +91,7 @@
 #define BLUE_TRAIN_DATA_COLOR 0x04FB
 #define TRAIN_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
-//Message Line #1
+//Message Line (currently used for calendar next event)
 #define MESSAGE_LINE_1_X 0
 #define MESSAGE_LINE_1_Y 47
 #define MESSAGE_LINE_1_WIDTH 128
@@ -113,21 +113,21 @@
         // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!
 
 // Weather - today, and 5-day forecast
-#define WEATHER_TODAY_X 68 //56
-#define WEATHER_TODAY_Y 19 //1
+#define WEATHER_TODAY_X 68 
+#define WEATHER_TODAY_Y 19 
 
-#define WEATHER_FORECAST_X 108 //74
-#define WEATHER_FORECAST_Y 12 //44
+#define WEATHER_FORECAST_X 108 
+#define WEATHER_FORECAST_Y 12 
 
 //Temperature range for today
-#define TEMPRANGE_X 60 //64
-#define TEMPRANGE_Y 42 //39
+#define TEMPRANGE_X 60 
+#define TEMPRANGE_Y 42 
 #define TEMPRANGE_WIDTH 36
 #define TEMPRANGE_HEIGHT 8
 #define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
 
 // How often to refresh weather forecast data
 // (limited by API throttling)
-#define WEATHER_REFRESH_INTERVAL_SEC 14400
+#define WEATHER_REFRESH_INTERVAL_SEC 3600
 
 #endif

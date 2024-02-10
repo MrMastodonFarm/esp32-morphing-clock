@@ -165,7 +165,7 @@ void reconnect() {
       client.subscribe(MQTT_NEXT_EVENT_SENSOR_TOPIC);
       client.subscribe(MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC);
     } else {
-      logStatusMessage("Stop Team Chrob!");
+      logStatusMessage("Stop Team Chrob!"); //silly inside joke
       Serial.print( "[FAILED] [ rc = " );
       Serial.print( client.state() );
       Serial.println( " : retrying in 5 seconds]" );

@@ -25,7 +25,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "creds_mqtt.h"
 #include "clock.h"
 #include "weather.h"
-#include "buzzer.h"
 
 Ticker displayTicker;
 unsigned long prevEpoch;
@@ -43,9 +42,6 @@ void setup(){
 
   pinMode(BUTTON1_PIN, INPUT_PULLUP);
 
- /* logStatusMessage("Buzzer setup");
-  buzzer_init();
-  buzzer_tone(500, 300);  */
   displayTest(300);
 // Set ESP32 host name
   String hostname = "MorphingClock";
@@ -88,10 +84,6 @@ void setup(){
   lastStatusSend = 0;
   logStatusMessage("MQTT done!");
 
- /* logStatusMessage("Initialize TSL...");
-  tslConfigureSensor();
-  logStatusMessage("TSL done!"); */
-
   logStatusMessage("Setting up watchdog...");
   esp_task_wdt_init(WDT_TIMEOUT, true);
   esp_task_wdt_add(NULL);
@@ -101,10 +93,8 @@ void setup(){
   drawTestBitmap();
   displayWeatherData();
   
-  CJBMessage("Go Team Chrob!");
+  CJBMessage("Go Team Chrob!"); //just a silly inside joke
   displayTicker.attach_ms(30, displayUpdater);
-  
-  //buzzer_tone(1000, 300);
 }
 
 uint8_t wheelval = 0;
@@ -134,10 +124,6 @@ void loop() {
     displayWeatherData();
     lastWeatherUpdate = millis();
   }
-
-  /* if (digitalRead(BUTTON1_PIN) == LOW) {
-    logStatusMessage("Yess... push it again!!");
-  } */
 
   //Do we need to clear the status message from the screen?
   if (logMessageActive) {
@@ -196,13 +182,6 @@ void displayUpdater() {
   }
 }
 
-/* void lightUpdate() {
-  float tslData = tslGetLux();
-  lastLightRead = millis();
-  if ((tslData >=0 ) && (tslData <= LIGHT_THRESHOLD)) {
-    displayLightData(tslData);
-  } 
-} */
 
 //TODO: http://www.rinkydinkelectronics.com/t_imageconverter565.php
 

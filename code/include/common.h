@@ -3,7 +3,6 @@
 
 #include "config.h"
 #include "rgb_display.h"
-#include "light_sensor.h"
 
 #include <WiFi.h>
 #include <PubSubClient.h>

@@ -143,11 +143,6 @@ uint16_t color565(uint32_t rgb) {
     ((rgb & 0xFF) >> 3);
 };
 
-/* Hacky workaround to avoid conversion to color565
-uint16_t color565(uint32_t rgb) {
-  return rgb;
-}; */
-
 void drawTestBitmap() {
   /*drawBitmap(BITMAP_X, BITMAP_Y, 8, 8, sun_8x8);
   drawBitmap(BITMAP_X+9, BITMAP_Y, 8, 8, cloud_8x8);
@@ -321,18 +316,17 @@ void getAccuWeatherData() {
     Serial.print(F("deserialization failed: "));
     Serial.println(error.f_str());
     logStatusMessage("Weather data error!");
-    weatherFailed = true;
+    weatherFailed = true; //The next ~15 lines of code are to give the weather pull a couple more tries before giving up
     failCount++;
-    
   }
+
   if (!error) {
     logStatusMessage("Weather success!");
     weatherFailed = false;
     failCount = 0;
     
   }
-  if (weatherFailed && failCount > 3)
-  {
+  if (weatherFailed && failCount > 3) {
     delay(5000);
     logStatusMessage("Weather trying again");
     getAccuWeatherData();
