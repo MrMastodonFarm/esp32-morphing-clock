@@ -93,6 +93,8 @@ void displayDate() {
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setTextColor(DATE_COLOR);
 
+    dma_display->setFont();
+   
     dma_display->setCursor(DOW_X, DOW_Y);
     dma_display->print(&timeinfo, "%a");
 

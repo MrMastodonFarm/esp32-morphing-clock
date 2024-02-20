@@ -6,6 +6,8 @@
 void displaySensorData();
 void displayTrainData();
 void displayCalendarData();
+void displayFlightNumber();
+void displayFlightDestination();
 void drawTestBitmap();
 void displayTodaysWeather();
 void displayWeatherForecast();

@@ -39,6 +39,8 @@ bool clockStartingUp = true;
 bool newSensorData = false;
 bool newTrainData = false;
 bool newCalendarData = false;
+bool newFlightNumber  = false;
+bool newFlightDestination  = false;
 bool sensorDead = true;
 
 //Heartbeat marker
@@ -63,6 +65,8 @@ int sensorBlueTrain3;
 int sensorBlueTrain4;
 char sensorNextEvent[];
 int sensorDaysTillNextEvent;
+char sensorFlightNumber[];
+char sensorFlightDestination[];
 
 // OTA update
 char updateValue;

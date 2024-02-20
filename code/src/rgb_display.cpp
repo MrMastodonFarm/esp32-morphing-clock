@@ -5,6 +5,10 @@
 
 #include "common.h"
 
+//#include <AsyncTCP.h>
+//#include <ESPAsyncWebServer.h>
+#include <WebSerial.h> 
+
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 // From: https://gist.github.com/davidegironi/3144efdc6d67e5df55438cc3cba613c8
@@ -40,11 +44,14 @@ void display_init() {
 
 void logStatusMessage(const char *message) {
   Serial.println(message);
+  //WebSerial.println(message);
   // Clear the last line first!
   dma_display->fillRect(0, 56, 128, 8, 0);
 
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
   dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+
+  dma_display->setFont();
 
   dma_display->setCursor(0, 56);   // Write on last line
 
@@ -58,11 +65,14 @@ void logStatusMessage(const char *message) {
 
 void logStatusMessage(String message) {
   Serial.println(message);
+  WebSerial.println(message);
   // Clear the last line first!
   dma_display->fillRect(0, 56, 128, 8, 0);
 
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
   dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+
+  dma_display->setFont();
 
   dma_display->setCursor(0, 56);   // Write on last line
 
@@ -79,6 +89,8 @@ void CJBMessage(String message) {
 
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
   dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+
+dma_display->setFont();
 
   dma_display->setCursor(0, 56);   // Write on last line
 
@@ -102,6 +114,8 @@ void displaySensorData() {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setTextColor(SENSOR_ERROR_DATA_COLOR);
+    
+    dma_display->setFont();
     
     dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y);   
     dma_display->print("No sensor data!");
@@ -146,19 +160,45 @@ void displayTrainData() {
   }
 }
 void displayCalendarData() {
-  Serial.println("Running displayCalendarData");
   if (newCalendarData) {
-    //if (1 == 1) {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-    //dma_display->setFont();
     dma_display->fillRect(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y, MESSAGE_LINE_1_WIDTH, MESSAGE_LINE_1_HEIGHT, 0);
+
+dma_display->setFont();
+
     dma_display->setCursor(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y);
     dma_display->setTextColor(MESSAGE_LINE_1_COLOR);
     dma_display->print(sensorNextEvent); 
     dma_display->printf(" -%3d days", sensorDaysTillNextEvent);
     //Serial.println(sensorNextEvent);
     newCalendarData = false; 
+  }
+}
+void displayFlightNumber() {
+  if (newFlightNumber) {
+    dma_display->setTextSize(1);     // size 1 == 8 pixels high
+    dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+    dma_display->setFont();
+    dma_display->fillRect(FLIGHT_DATA_X, FLIGHT_DATA_Y, FLIGHT_DATA_WIDTH - 24, FLIGHT_DATA_HEIGHT, 0);
+    dma_display->setCursor(FLIGHT_DATA_X, FLIGHT_DATA_Y);
+    dma_display->setTextColor(FLIGHT_DATA_COLOR);
+    dma_display->print(sensorFlightNumber);
+    Serial.println(sensorFlightNumber);
+    newFlightNumber = false; 
+  }
+}
+void displayFlightDestination() {
+  if (newFlightDestination) {
+    dma_display->setTextSize(1);     // size 1 == 8 pixels high
+    dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+    dma_display->setFont();
+    dma_display->fillRect(FLIGHT_DATA_X + 42, FLIGHT_DATA_Y, FLIGHT_DATA_WIDTH - 30, FLIGHT_DATA_HEIGHT, 0);
+    dma_display->setCursor(FLIGHT_DATA_X + 42, FLIGHT_DATA_Y);
+    dma_display->setTextColor(FLIGHT_DATA_COLOR);
+    dma_display->print(sensorFlightDestination);
+    Serial.println(sensorFlightDestination);
+    newFlightDestination = false; 
   }
 }
 /* void displayLightData(float luxValue) {
