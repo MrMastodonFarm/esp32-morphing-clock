@@ -56,7 +56,6 @@
 #define DATE_WIDTH 50
 #define DATE_HEIGHT 9
 
-
 // Weather sensor data
 #define SENSOR_DATA_X 59
 #define SENSOR_DATA_Y 12
@@ -97,6 +96,14 @@
 #define MESSAGE_LINE_1_WIDTH 128
 #define MESSAGE_LINE_1_HEIGHT 8
 #define MESSAGE_LINE_1_COLOR 0x04FB
+#define MESSAGE_LINE_1_ERROR_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
+
+//Flight Data
+#define FLIGHT_DATA_X 64
+#define FLIGHT_DATA_Y 0
+#define FLIGHT_DATA_WIDTH 64
+#define FLIGHT_DATA_HEIGHT 8
+#define FLIGHT_DATA_COLOR 0x04FB
 #define MESSAGE_LINE_1_ERROR_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
 // Log messages at the bottom

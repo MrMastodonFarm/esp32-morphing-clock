@@ -73,6 +73,8 @@ void clearStatusMessage();
 void displaySensorData();
 void displayTrainData();
 void displayCalendarData();
+void displayFlightNumber();
+void displayFlightDestination();
 void displayTest(int delayMs);
 
 #endif

@@ -50,6 +50,8 @@ extern bool clockStartingUp;
 extern bool newSensorData;
 extern bool newTrainData;
 extern bool newCalendarData;
+extern bool newFlightNumber;
+extern bool newFlightDestination;
 extern bool sensorDead;
 
 //The actual sensor data
@@ -65,6 +67,8 @@ extern int sensorBlueTrain3;
 extern int sensorBlueTrain4;
 extern char sensorNextEvent[65];
 extern int sensorDaysTillNextEvent;
+extern char sensorFlightDestination[3];
+extern char sensorFlightNumber[6];
 
 //Just a heartbeat for the watchdog...
 extern bool heartBeat;

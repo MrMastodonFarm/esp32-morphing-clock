@@ -26,6 +26,21 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "clock.h"
 #include "weather.h"
 
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSerial.h>
+
+AsyncWebServer server(80);
+
+void recvMsg(uint8_t *data, size_t len){
+  WebSerial.println("Received Data...");
+  String d = "";
+  for(int i=0; i < len; i++){
+    d += char(data[i]);
+  }
+  WebSerial.println(d);
+}
+
 Ticker displayTicker;
 unsigned long prevEpoch;
 unsigned long lastNTPUpdate;
@@ -59,6 +74,11 @@ void setup(){
   Serial.println("");
   Serial.println("WiFi connected.");
   logStatusMessage("WiFi connected!");
+
+  // WebSerial is accessible at "<IP Address>/webserial" in browser
+  WebSerial.begin(&server);
+  WebSerial.msgCallback(recvMsg);
+  server.begin();
 
   logStatusMessage("NTP time...");
   configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
@@ -110,6 +130,9 @@ void loop() {
   } 
   client.loop();
 
+  //WebSerial.println("Hello!");
+  //delay(1000);
+
   // Periodically refresh NTP time
   if (millis() - lastNTPUpdate > 1000*NTP_REFRESH_INTERVAL_SEC) {
     logStatusMessage("NTP Refresh");
@@ -149,6 +172,17 @@ void loop() {
     if (newCalendarData) {
     //logStatusMessage("Sensor data in");
     displayCalendarData();
+  }
+  //Do we have new flight data?
+    if (newFlightNumber) {
+    //logStatusMessage("Sensor data in");
+    displayFlightNumber();
+    displayFlightDestination();
+  }
+    //Do we have new flight data?
+    if (newFlightDestination) {
+    //logStatusMessage("Sensor data in");
+    displayFlightDestination();
   }
   // Is the sensor data too old?
   if (millis() - lastSensorRead > 1000*SENSOR_DEAD_INTERVAL_SEC) {
