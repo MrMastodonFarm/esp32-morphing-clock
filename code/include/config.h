@@ -28,7 +28,7 @@
 
 // Screen positioning settings
 // Panel size
-#define PANEL_WIDTH 128
+#define PANEL_WIDTH 64
 #define PANEL_HEIGHT 64
 
 // Clock
@@ -45,22 +45,22 @@
 #define CLOCK_ANIMATION_DELAY_MSEC 20
 
 // Day of week
-#define DOW_X 4
-#define DOW_Y 37
+#define DOW_X 0
+#define DOW_Y 42
 #define DOW_COLOR ((0x00 & 0xF8) << 8) | ((0x40 & 0xFC) << 3) | (0xFF >> 3)
 // Date
-#define DATE_X DOW_X + 20
+#define DATE_X DOW_X + 12
 #define DATE_Y DOW_Y
 #define DATE_COLOR DOW_COLOR
 //Width and height are for both DATE and DOW
-#define DATE_WIDTH 50
-#define DATE_HEIGHT 9
+#define DATE_WIDTH 36
+#define DATE_HEIGHT 6
 
 // Weather sensor data
-#define SENSOR_DATA_X 59
-#define SENSOR_DATA_Y 12
-#define SENSOR_DATA_WIDTH 32 //128
-#define SENSOR_DATA_HEIGHT 5
+#define SENSOR_DATA_X 0
+#define SENSOR_DATA_Y 43
+#define SENSOR_DATA_WIDTH 32
+#define SENSOR_DATA_HEIGHT 6
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
@@ -77,7 +77,7 @@
 // Yellow Line Train data
 #define TRAIN_DATA_X 0
 #define TRAIN_DATA_Y 0
-#define TRAIN_DATA_WIDTH 52
+#define TRAIN_DATA_WIDTH 41
 #define TRAIN_DATA_HEIGHT 5
 #define TRAIN_DATA_COLOR 0xFE80
 #define TRAIN_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
@@ -85,25 +85,25 @@
 //Blue Line Train Data - position not used so that all train data is a block
 #define BLUE_TRAIN_DATA_X 0 //not used
 #define BLUE_TRAIN_DATA_Y 7 //not used
-#define BLUE_TRAIN_DATA_WIDTH 52
+#define BLUE_TRAIN_DATA_WIDTH 42
 #define BLUE_TRAIN_DATA_HEIGHT 5
 #define BLUE_TRAIN_DATA_COLOR 0x04FB
 #define TRAIN_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
 //Message Line (currently used for calendar next event)
 #define MESSAGE_LINE_1_X 0
-#define MESSAGE_LINE_1_Y 47
-#define MESSAGE_LINE_1_WIDTH 128
-#define MESSAGE_LINE_1_HEIGHT 8
+#define MESSAGE_LINE_1_Y 49
+#define MESSAGE_LINE_1_WIDTH 64
+#define MESSAGE_LINE_1_HEIGHT 6
 #define MESSAGE_LINE_1_COLOR 0x04FB
 #define MESSAGE_LINE_1_ERROR_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
 //Flight Data
-#define FLIGHT_DATA_X 64
+#define FLIGHT_DATA_X 41
 #define FLIGHT_DATA_Y 0
-#define FLIGHT_DATA_WIDTH 64
-#define FLIGHT_DATA_HEIGHT 8
-#define FLIGHT_DATA_COLOR 0x04FB
+#define FLIGHT_DATA_WIDTH 24
+#define FLIGHT_DATA_HEIGHT 6
+#define FLIGHT_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 #define MESSAGE_LINE_1_ERROR_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
 // Log messages at the bottom
@@ -127,10 +127,10 @@
 #define WEATHER_FORECAST_Y 12 
 
 //Temperature range for today
-#define TEMPRANGE_X 60 
+#define TEMPRANGE_X 36 
 #define TEMPRANGE_Y 42 
 #define TEMPRANGE_WIDTH 36
-#define TEMPRANGE_HEIGHT 8
+#define TEMPRANGE_HEIGHT 6
 #define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
 
 // How often to refresh weather forecast data

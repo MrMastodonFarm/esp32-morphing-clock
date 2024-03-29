@@ -59,7 +59,7 @@ void setup(){
 
   displayTest(300);
 // Set ESP32 host name
-  String hostname = "MorphingClock";
+  String hostname = "MorphingClock64-1";
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
   WiFi.setHostname(hostname.c_str()); //define hostname
 
@@ -113,7 +113,7 @@ void setup(){
   drawTestBitmap();
   displayWeatherData();
   
-  CJBMessage("Go Team Chrob!"); //just a silly inside joke
+  CJBMessage("Go Chrob!"); //just a silly inside joke
   displayTicker.attach_ms(30, displayUpdater);
 }
 
@@ -136,7 +136,7 @@ void loop() {
   // Periodically refresh NTP time
   if (millis() - lastNTPUpdate > 1000*NTP_REFRESH_INTERVAL_SEC) {
     logStatusMessage("NTP Refresh");
-    configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "ro.pool.ntp.org");
+    configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
     lastNTPUpdate = millis();
   }
 
@@ -153,7 +153,7 @@ void loop() {
     if (millis() > messageDisplayMillis + LOG_MESSAGE_PERSISTENCE_MSEC) {
       clearStatusMessage();
       drawTestBitmap();
-      CJBMessage("Go Team Chrob!");
+      CJBMessage("Go Chrob!");
     }
   }
 

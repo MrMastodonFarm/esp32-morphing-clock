@@ -27,7 +27,7 @@ uint16_t colorWheel(uint8_t pos) {
 void display_init() {
   HUB75_I2S_CFG::i2s_pins _pins={R1_PIN, G1_PIN, B1_PIN, R2_PIN, G2_PIN, B2_PIN, A_PIN, B_PIN, C_PIN, D_PIN, E_PIN, LAT_PIN, OE_PIN, CLK_PIN};
   HUB75_I2S_CFG mxconfig(
-	128, // Module width
+	64, // Module width
 	64, // Module height
 	1, // chain length
 	_pins // pin mapping
@@ -105,7 +105,7 @@ dma_display->setFont();
 void clearStatusMessage() {
    dma_display->fillRect(0, 56, 128, 8, 0); 
    logMessageActive = false;
-   CJBMessage("Go Team Chrob!"); //refresh silly inside joke after the status message goes away
+   CJBMessage("Go Chrob!"); //refresh silly inside joke after the status message goes away
 }
 
 void displaySensorData() {
@@ -127,7 +127,7 @@ void displaySensorData() {
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setTextColor(SENSOR_DATA_COLOR);
     dma_display->setFont(&TomThumb);
-    dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y+5);   
+    dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y + 5);   
     dma_display->printf("%3.0f  F %3d%%", sensorTemp, sensorHumi);
     
     // Draw the degree symbol manually
@@ -165,14 +165,15 @@ void displayCalendarData() {
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->fillRect(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y, MESSAGE_LINE_1_WIDTH, MESSAGE_LINE_1_HEIGHT, 0);
 
-dma_display->setFont();
+    dma_display->setFont(&TomThumb);
 
-    dma_display->setCursor(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y);
+    dma_display->setCursor(MESSAGE_LINE_1_X, MESSAGE_LINE_1_Y + 5);
     dma_display->setTextColor(MESSAGE_LINE_1_COLOR);
     dma_display->print(sensorNextEvent); 
-    dma_display->printf(" -%3d days", sensorDaysTillNextEvent);
+    dma_display->printf(" -%3dd", sensorDaysTillNextEvent);
     //Serial.println(sensorNextEvent);
     newCalendarData = false; 
+    dma_display->setFont();
   }
 }
 void displayFlightNumber() {
@@ -180,25 +181,28 @@ void displayFlightNumber() {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setFont();
-    dma_display->fillRect(FLIGHT_DATA_X, FLIGHT_DATA_Y, FLIGHT_DATA_WIDTH - 24, FLIGHT_DATA_HEIGHT, 0);
-    dma_display->setCursor(FLIGHT_DATA_X, FLIGHT_DATA_Y);
+    dma_display->setFont(&TomThumb);
+    dma_display->fillRect(FLIGHT_DATA_X, FLIGHT_DATA_Y, FLIGHT_DATA_WIDTH, FLIGHT_DATA_HEIGHT, 0);
+    dma_display->setCursor(FLIGHT_DATA_X, FLIGHT_DATA_Y + 5);
     dma_display->setTextColor(FLIGHT_DATA_COLOR);
     dma_display->print(sensorFlightNumber);
     Serial.println(sensorFlightNumber);
     newFlightNumber = false; 
+    dma_display->setFont();
   }
 }
 void displayFlightDestination() {
   if (newFlightDestination) {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-    dma_display->setFont();
-    dma_display->fillRect(FLIGHT_DATA_X + 42, FLIGHT_DATA_Y, FLIGHT_DATA_WIDTH - 30, FLIGHT_DATA_HEIGHT, 0);
-    dma_display->setCursor(FLIGHT_DATA_X + 42, FLIGHT_DATA_Y);
+    dma_display->setFont(&TomThumb);
+    dma_display->fillRect(FLIGHT_DATA_X, FLIGHT_DATA_Y + 6, FLIGHT_DATA_WIDTH, FLIGHT_DATA_HEIGHT, 0);
+    dma_display->setCursor(FLIGHT_DATA_X + 5, FLIGHT_DATA_Y + 12);
     dma_display->setTextColor(FLIGHT_DATA_COLOR);
     dma_display->print(sensorFlightDestination);
     Serial.println(sensorFlightDestination);
     newFlightDestination = false; 
+    dma_display->setFont();
   }
 }
 /* void displayLightData(float luxValue) {

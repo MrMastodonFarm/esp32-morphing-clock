@@ -87,17 +87,18 @@ void displayClock() {
 }
 
 void displayDate() {
-    dma_display->fillRect(DOW_X, DOW_Y, DATE_WIDTH, DATE_HEIGHT, 0);
+    dma_display->fillRect(DOW_X, DOW_Y-5, DATE_WIDTH, DATE_HEIGHT, 0);
 
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setTextColor(DATE_COLOR);
-
-    dma_display->setFont();
+    dma_display->setFont(&TomThumb);
    
     dma_display->setCursor(DOW_X, DOW_Y);
     dma_display->print(&timeinfo, "%a");
 
     dma_display->setCursor(DATE_X, DATE_Y);
     dma_display->print(&timeinfo, "%m/%d");
+
+    dma_display->setFont();
 }

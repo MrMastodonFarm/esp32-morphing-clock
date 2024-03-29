@@ -21,12 +21,12 @@
 #define CLK_PIN 16
 */
 
-#define R1_PIN 25
-#define G1_PIN 27
-#define B1_PIN 26
-#define R2_PIN 14
-#define G2_PIN 13
-#define B2_PIN 12
+#define R1_PIN 27 //25
+#define G1_PIN 26 //27
+#define B1_PIN 25 //26
+#define R2_PIN 13 //14
+#define G2_PIN 12 //13
+#define B2_PIN 14 //12
  
 #define A_PIN 23
 #define B_PIN 19
