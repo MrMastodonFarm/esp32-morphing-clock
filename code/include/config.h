@@ -32,12 +32,12 @@
 #define PANEL_HEIGHT 64
 
 // Clock
-#define CLOCK_X 1
+#define CLOCK_X 0
 #define CLOCK_Y 15
-#define CLOCK_SEGMENT_HEIGHT 8
-#define CLOCK_SEGMENT_WIDTH 8
-#define CLOCK_SEGMENT_SPACING 5
-#define CLOCK_WIDTH 6*(CLOCK_SEGMENT_WIDTH+CLOCK_SEGMENT_SPACING)+4
+#define CLOCK_SEGMENT_HEIGHT 6 //8
+#define CLOCK_SEGMENT_WIDTH 6 //8
+#define CLOCK_SEGMENT_SPACING 3
+#define CLOCK_WIDTH 4*(CLOCK_SEGMENT_WIDTH+CLOCK_SEGMENT_SPACING)+4
 #define CLOCK_HEIGHT 2*CLOCK_SEGMENT_HEIGHT+3
 //color565 == ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3)
 #define CLOCK_DIGIT_COLOR  ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
@@ -45,11 +45,11 @@
 #define CLOCK_ANIMATION_DELAY_MSEC 20
 
 // Day of week
-#define DOW_X 0
-#define DOW_Y 42
+#define DOW_X 3
+#define DOW_Y 37
 #define DOW_COLOR ((0x00 & 0xF8) << 8) | ((0x40 & 0xFC) << 3) | (0xFF >> 3)
 // Date
-#define DATE_X DOW_X + 12
+#define DATE_X DOW_X + 14
 #define DATE_Y DOW_Y
 #define DATE_COLOR DOW_COLOR
 //Width and height are for both DATE and DOW
@@ -57,9 +57,9 @@
 #define DATE_HEIGHT 6
 
 // Weather sensor data
-#define SENSOR_DATA_X 0
+#define SENSOR_DATA_X 65
 #define SENSOR_DATA_Y 43
-#define SENSOR_DATA_WIDTH 32
+#define SENSOR_DATA_WIDTH 33
 #define SENSOR_DATA_HEIGHT 6
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
@@ -85,7 +85,7 @@
 //Blue Line Train Data - position not used so that all train data is a block
 #define BLUE_TRAIN_DATA_X 0 //not used
 #define BLUE_TRAIN_DATA_Y 7 //not used
-#define BLUE_TRAIN_DATA_WIDTH 42
+#define BLUE_TRAIN_DATA_WIDTH 43
 #define BLUE_TRAIN_DATA_HEIGHT 5
 #define BLUE_TRAIN_DATA_COLOR 0x04FB
 #define TRAIN_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
@@ -120,15 +120,15 @@
         // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!
 
 // Weather - today, and 5-day forecast
-#define WEATHER_TODAY_X 68 
-#define WEATHER_TODAY_Y 19 
+#define WEATHER_TODAY_X 43 
+#define WEATHER_TODAY_Y 14 
 
-#define WEATHER_FORECAST_X 108 
-#define WEATHER_FORECAST_Y 12 
+#define WEATHER_FORECAST_X 7 
+#define WEATHER_FORECAST_Y 39 
 
 //Temperature range for today
-#define TEMPRANGE_X 36 
-#define TEMPRANGE_Y 42 
+#define TEMPRANGE_X 39 
+#define TEMPRANGE_Y 37 
 #define TEMPRANGE_WIDTH 36
 #define TEMPRANGE_HEIGHT 6
 #define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)

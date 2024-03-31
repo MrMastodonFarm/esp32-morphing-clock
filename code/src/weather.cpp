@@ -202,8 +202,7 @@ void drawWeatherIcon(int startx, int starty, int width, int height, uint8_t icon
 }
 
 void displayTodaysWeather() {
-  //drawWeatherIcon(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, forecast5Days[0], true);
-  drawWeatherIcon(WEATHER_TODAY_X, WEATHER_TODAY_Y, 16, 16, 6, false);
+  drawWeatherIcon(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, forecast5Days[0], true);
 }
 
 void displayTodaysTempRange() {
@@ -213,24 +212,24 @@ void displayTodaysTempRange() {
   dma_display->setTextColor(TEMPRANGE_COLOR);
   dma_display->setFont(&TomThumb);
   dma_display->setCursor(TEMPRANGE_X, TEMPRANGE_Y);   
-  dma_display->printf("%3d/%3d  F", minTempToday, maxTempToday);
+  dma_display->printf("%3d/%3d", minTempToday, maxTempToday);
   
   // Draw the degree symbol manually
-  dma_display->fillRect(TEMPRANGE_X + 24, TEMPRANGE_Y - 5, 2, 2, TEMPRANGE_COLOR);
+  dma_display->fillRect(TEMPRANGE_X + 23, TEMPRANGE_Y - 5, 2, 2, TEMPRANGE_COLOR);
   dma_display->setFont();
 }
 
 void displayWeatherForecast() {
-  dma_display->fillRect(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y, 32, 36, 0);
-  dma_display->setFont(&TomThumb);
+  dma_display->fillRect(WEATHER_FORECAST_X, WEATHER_FORECAST_Y, 8, 64, 0);
+  //dma_display->setFont(&TomThumb);
   for (int i=1; i<5; i++) {  //skip day 0, since we are already displaying it somewhere else using displayTodaysWeather()
     //drawWeatherIcon(WEATHER_FORECAST_X, WEATHER_FORECAST_Y + 9*(i-1), 8, 8, forecast5Days[i], false);
-    drawWeatherIcon(WEATHER_FORECAST_X, WEATHER_FORECAST_Y + 9*(i-1), 8, 8, 6, false);
-    dma_display->setCursor(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
-    dma_display->printf("%3d", minTemp[i]);
-    dma_display->setCursor(WEATHER_FORECAST_X + 7, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
-    dma_display->printf("%3d", maxTemp[i]);
-    dma_display->setFont();
+    drawWeatherIcon(WEATHER_FORECAST_X + 14*(i-1), WEATHER_FORECAST_Y, 8, 8, forecast5Days[i], false);
+    //dma_display->setCursor(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
+    //dma_display->printf("%3d", minTemp[i]);
+    //dma_display->setCursor(WEATHER_FORECAST_X + 7, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
+    //dma_display->printf("%3d", maxTemp[i]);
+    //dma_display->setFont();
   }
   dma_display->setFont();
 }
@@ -289,19 +288,15 @@ void drawHeartBeat() {
 // 6 - waxing gibbous
 // Based on https://apidev.accuweather.com/developers/weatherIcons
 int accuWeatherIconMapping(int icon) {
-  //if (icon <= 5)  return 0;
-  if (icon <= 5)  return 6;
+  if (icon <= 5)  return 0;
   if (icon <= 11) return 1;
   if (icon <= 14) return 2;
   if (icon <= 17) return 4;
   if (icon == 18) return 3;
   if (icon <= 29) return 5;
-  //if (icon <= 5)  return 0;
-  if (icon <= 5)  return 6;
+  if (icon == 30) return 0;
   if (icon <= 32) return 2;
-  //return 0;
-  return 6;
-  
+  return 0;
 }
 
 void getAccuWeatherData() {
