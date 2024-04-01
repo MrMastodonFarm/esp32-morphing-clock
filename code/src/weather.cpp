@@ -220,7 +220,7 @@ void displayTodaysTempRange() {
 }
 
 void displayWeatherForecast() {
-  dma_display->fillRect(WEATHER_FORECAST_X, WEATHER_FORECAST_Y, 8, 64, 0);
+  dma_display->fillRect(WEATHER_FORECAST_X, WEATHER_FORECAST_Y, 64, 8, 0); //hardcoding the wipe here - should change this to variables
   //dma_display->setFont(&TomThumb);
   for (int i=1; i<5; i++) {  //skip day 0, since we are already displaying it somewhere else using displayTodaysWeather()
     //drawWeatherIcon(WEATHER_FORECAST_X, WEATHER_FORECAST_Y + 9*(i-1), 8, 8, forecast5Days[i], false);
