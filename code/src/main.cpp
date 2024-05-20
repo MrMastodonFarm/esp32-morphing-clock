@@ -26,19 +26,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "clock.h"
 #include "weather.h"
 
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <WebSerial.h>
+//#include <AsyncTCP.h>
+//#include <ESPAsyncWebServer.h>
+//#include <WebSerial.h>
 
-AsyncWebServer server(80);
+//AsyncWebServer server(80);
 
 void recvMsg(uint8_t *data, size_t len){
-  WebSerial.println("Received Data...");
+  //WebSerial.println("Received Data...");
   String d = "";
   for(int i=0; i < len; i++){
     d += char(data[i]);
   }
-  WebSerial.println(d);
+  //WebSerial.println(d);
 }
 
 Ticker displayTicker;
@@ -76,9 +76,9 @@ void setup(){
   logStatusMessage("WiFi connected!");
 
   // WebSerial is accessible at "<IP Address>/webserial" in browser
-  WebSerial.begin(&server);
-  WebSerial.msgCallback(recvMsg);
-  server.begin();
+  //WebSerial.begin(&server);
+  //WebSerial.msgCallback(recvMsg);
+  //server.begin();
 
   logStatusMessage("NTP time...");
   configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
@@ -113,7 +113,7 @@ void setup(){
   drawTestBitmap();
   displayWeatherData();
   
-  CJBMessage("Go Team Chrob!"); //just a silly inside joke
+  CJBMessage("Go Team Chrob!!"); //just a silly inside joke
   displayTicker.attach_ms(30, displayUpdater);
 }
 
@@ -123,6 +123,10 @@ void loop() {
     logStatusMessage("WiFi lost!");
     WiFi.reconnect();
   }
+  //Checking current transmit power
+  //int txPower = WiFi.getTxPower();
+  //Serial.print("Current transmit power: ");
+  //Serial.println(txPower);
 
   if ( !client.connected() ) {
     logStatusMessage("MQTT lost");
@@ -153,7 +157,7 @@ void loop() {
     if (millis() > messageDisplayMillis + LOG_MESSAGE_PERSISTENCE_MSEC) {
       clearStatusMessage();
       drawTestBitmap();
-      CJBMessage("Go Team Chrob!");
+      CJBMessage("Go Team Chrob!!");
     }
   }
 

@@ -8,9 +8,9 @@
 #include "creds_mqtt.h"
 #include "ota_update.h"
 
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <WebSerial.h>
+//#include <AsyncTCP.h>
+//#include <ESPAsyncWebServer.h>
+//#include <WebSerial.h>
 
 char mqtt_buffer[MQTT_BUFMAX];
 
@@ -23,7 +23,7 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-  WebSerial.println("MQTT Message");
+  //WebSerial.println("MQTT Message");
 
   if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
     payload[length]=0;
@@ -186,7 +186,7 @@ void reconnect() {
       client.subscribe(MQTT_FLIGHT_NUMBER_TOPIC);
       client.subscribe(MQTT_FLIGHT_DESTINATION_TOPIC);
     } else {
-      logStatusMessage("Stop Team Chrob!"); //silly inside joke
+      logStatusMessage("Can't Stop Team Chrob!!"); //silly inside joke
       Serial.print( "[FAILED] [ rc = " );
       Serial.print( client.state() );
       Serial.println( " : retrying in 5 seconds]" );
