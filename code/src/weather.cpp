@@ -1,9 +1,9 @@
 #include "weather.h"
 #include "common.h"
-#include "creds_accuweather.h"
+#include "config.h"
 
 #include <HTTPClient.h>
-#include <WiFiClientSecure.h>
+#include <WiFi.h>
 #include <ArduinoJson.h>
 //#include <Fonts/FreeSerifBold12pt7b.h>
 
@@ -254,62 +254,45 @@ void drawHeartBeat() {
   }
 }
 
-// Return a mapping from the Accuweather icons to the
-// internal icons: 
+// Return a mapping from WMO weather codes to internal icons:
 // 0 - sun
 // 1 - clouds
 // 2 - showers
 // 3 - rain
 // 4 - storm
 // 5 - snow
-// Based on https://apidev.accuweather.com/developers/weatherIcons
-int accuWeatherIconMapping(int icon) {
-  if (icon <= 5)  return 0;
-  if (icon <= 11) return 1;
-  if (icon <= 14) return 2;
-  if (icon <= 17) return 4;
-  if (icon == 18) return 3;
-  if (icon <= 29) return 5;
-  if (icon == 30) return 0;
-  if (icon <= 32) return 2;
-  return 0;
+// Based on https://open-meteo.com/en/docs (WMO Weather interpretation codes)
+int wmoWeatherCodeMapping(int code) {
+  if (code == 0) return 0;           // Clear sky -> sun
+  if (code <= 3) return 1;           // Partly cloudy to overcast -> clouds
+  if (code <= 48) return 1;          // Fog -> clouds
+  if (code <= 55) return 2;          // Drizzle -> showers
+  if (code <= 67) return 3;          // Rain/freezing rain -> rain
+  if (code <= 77) return 5;          // Snow -> snow
+  if (code <= 82) return 2;          // Rain showers -> showers
+  if (code <= 86) return 5;          // Snow showers -> snow
+  if (code >= 95) return 4;          // Thunderstorm -> storm
+  return 1;                          // Default -> clouds
 }
 
-void getAccuWeatherData() {
+void getOpenMeteoData() {
+  // Check WiFi connection first
+  if (WiFi.status() != WL_CONNECTED) {
+    Serial.println("Weather: WiFi not connected, skipping");
+    return;
+  }
+
   HTTPClient http;
   char url[256];
-  DynamicJsonDocument doc(16384); // Might be overkill, since the Accuweather JSONs are about 3-5K in length - but better safe...
+  DynamicJsonDocument doc(4096);  // Open-Meteo responses are smaller than AccuWeather
 
-  StaticJsonDocument<300> filter;
-  filter["DailyForecasts"][0]["Date"] = true;
-  filter["DailyForecasts"][0]["Temperature"]["Minimum"]["Value"] = true;
-  filter["DailyForecasts"][0]["Temperature"]["Maximum"]["Value"] = true;
-  filter["DailyForecasts"][0]["Day"]["Icon"] = true;
+  snprintf(url, 256,
+      "http://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+      "&temperature_unit=fahrenheit&timezone=America%%2FNew_York&forecast_days=5",
+      WEATHER_LATITUDE, WEATHER_LONGITUDE);
 
-  /* Filter should look like this:
-  {
-	"DailyForecasts": [
-		"Date": True,
-		"Temperature": {
-			"Minimum": {
-				"Value": True
-			},
-      "Maximum": {
-        "Value": True
-      }
-		},
-	"Day": {
-		"Icon": true
-	}
-	]
-  } */
-
-  snprintf( url, 256, "https://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=%s&metric=false",
-      ACCUWEATHER_CITY_CODE, ACCUWEATHER_API_KEY);
-
-  WiFiClientSecure *client = new WiFiClientSecure;
-  client->setInsecure();  // Skip certificate verification (acceptable for weather data)
-  http.begin(*client, url);
+  http.begin(url);  // Use plain HTTP - Open-Meteo supports it
 
   int httpCode = http.GET();
   if (httpCode != 200) {
@@ -318,18 +301,17 @@ void getAccuWeatherData() {
     weatherFailed = true;
     failCount++;
     http.end();
-    delete client;
     return;
   }
 
-  DeserializationError error = deserializeJson( doc, http.getStream(), 
-          DeserializationOption::Filter(filter));
+  String payload = http.getString();
+  DeserializationError error = deserializeJson(doc, payload);
 
   if (error) {
     Serial.print(F("deserialization failed: "));
     Serial.println(error.f_str());
     logStatusMessage("Weather data error!");
-    weatherFailed = true; //The next ~15 lines of code are to give the weather pull a couple more tries before giving up
+    weatherFailed = true;
     failCount++;
   }
 
@@ -337,36 +319,30 @@ void getAccuWeatherData() {
     logStatusMessage("Weather success!");
     weatherFailed = false;
     failCount = 0;
-
   }
 
   http.end();
-  delete client;
 
   if (weatherFailed && failCount > 3) {
     delay(5000);
     logStatusMessage("Weather trying again");
-    getAccuWeatherData();
+    getOpenMeteoData();
   }
 
-  doc.shrinkToFit();
+  if (weatherFailed) return;
 
-  //Just in case we need to debug...
-  //serializeJsonPretty(doc, Serial);
+  // Populate the variables from Open-Meteo response
+  JsonArray temps_max = doc["daily"]["temperature_2m_max"];
+  JsonArray temps_min = doc["daily"]["temperature_2m_min"];
+  JsonArray weather_codes = doc["daily"]["weather_code"];
 
-  //Populate the variables:
-  minTempToday = round( double(doc["DailyForecasts"][0]["Temperature"]["Minimum"]["Value"]) );
-  maxTempToday = round( double(doc["DailyForecasts"][0]["Temperature"]["Maximum"]["Value"]) );
+  minTempToday = round(temps_min[0].as<double>());
+  maxTempToday = round(temps_max[0].as<double>());
 
-  Serial.println(minTempToday);
-  Serial.println(maxTempToday);
-
-  for (int i=0; i<5; i++) {
-    forecast5Days[i] = accuWeatherIconMapping(doc["DailyForecasts"][i]["Day"]["Icon"]);
-  }
-  for (int i=0; i<5; i++) {
-    minTemp[i] = round( double(doc["DailyForecasts"][i]["Temperature"]["Minimum"]["Value"]) );
-    maxTemp[i] = round( double(doc["DailyForecasts"][i]["Temperature"]["Maximum"]["Value"]) );
+  for (int i = 0; i < 5; i++) {
+    forecast5Days[i] = wmoWeatherCodeMapping(weather_codes[i].as<int>());
+    minTemp[i] = round(temps_min[i].as<double>());
+    maxTemp[i] = round(temps_max[i].as<double>());
   }
 }
 
