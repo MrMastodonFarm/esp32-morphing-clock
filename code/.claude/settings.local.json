@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/rober/code/morphing-clock-64x64/64x64-morphing-clock/**)",
+      "Bash(wc:*)",
+      "Bash(pio run:*)",
+      "Bash(~/.platformio/penv/Scripts/pio run)"
+    ]
+  }
+}

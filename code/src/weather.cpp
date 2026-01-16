@@ -1,6 +1,6 @@
 #include "weather.h"
 #include "common.h"
-#include "creds_accuweather.h"
+#include "creds_weather.h"
 
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
@@ -277,71 +277,66 @@ void drawHeartBeat() {
   }
 }
 
-// Return a mapping from the Accuweather icons to the
-// internal icons: 
+// Return a mapping from Open-Meteo WMO weather codes to internal icons:
 // 0 - sun
 // 1 - clouds
 // 2 - showers
 // 3 - rain
 // 4 - storm
 // 5 - snow
-// 6 - waxing gibbous
-// Based on https://apidev.accuweather.com/developers/weatherIcons
-int accuWeatherIconMapping(int icon) {
-  if (icon <= 5)  return 0;
-  if (icon <= 11) return 1;
-  if (icon <= 14) return 2;
-  if (icon <= 17) return 4;
-  if (icon == 18) return 3;
-  if (icon <= 29) return 5;
-  if (icon == 30) return 0;
-  if (icon <= 32) return 2;
-  return 0;
+// 6 - waxing gibbous (not used for weather)
+// Based on https://open-meteo.com/en/docs (WMO Weather interpretation codes)
+int openMeteoIconMapping(int code) {
+  if (code == 0) return 0;                    // Clear sky -> sun
+  if (code <= 3) return 1;                    // Mainly clear, partly cloudy, overcast -> clouds
+  if (code == 45 || code == 48) return 1;     // Fog -> clouds
+  if (code >= 51 && code <= 57) return 2;     // Drizzle -> showers
+  if (code >= 61 && code <= 67) return 3;     // Rain -> rain
+  if (code >= 71 && code <= 77) return 5;     // Snow -> snow
+  if (code >= 80 && code <= 82) return 2;     // Rain showers -> showers
+  if (code >= 85 && code <= 86) return 5;     // Snow showers -> snow
+  if (code >= 95 && code <= 99) return 4;     // Thunderstorm -> storm
+  return 1;                                   // Default to clouds
 }
 
-void getAccuWeatherData() {
+void getWeatherData() {
   HTTPClient http;
   char url[256];
-  DynamicJsonDocument doc(16384); // Might be overkill, since the Accuweather JSONs are about 3-5K in length - but better safe...
+  DynamicJsonDocument doc(4096);
 
-  StaticJsonDocument<300> filter;
-  filter["DailyForecasts"][0]["Date"] = true;
-  filter["DailyForecasts"][0]["Temperature"]["Minimum"]["Value"] = true;
-  filter["DailyForecasts"][0]["Temperature"]["Maximum"]["Value"] = true;
-  filter["DailyForecasts"][0]["Day"]["Icon"] = true;
+  StaticJsonDocument<200> filter;
+  filter["daily"]["weather_code"] = true;
+  filter["daily"]["temperature_2m_max"] = true;
+  filter["daily"]["temperature_2m_min"] = true;
 
-  /* Filter should look like this:
-  {
-	"DailyForecasts": [
-		"Date": True,
-		"Temperature": {
-			"Minimum": {
-				"Value": True
-			},
-      "Maximum": {
-        "Value": True
-      }
-		},
-	"Day": {
-		"Icon": true
-	}
-	]
-  } */
-
-  snprintf( url, 256, "http://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=%s&metric=false", 
-      ACCUWEATHER_CITY_CODE, ACCUWEATHER_API_KEY);
+  snprintf(url, 256,
+    "https://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
+    "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+    "&temperature_unit=fahrenheit&timezone=auto&forecast_days=5",
+    WEATHER_LATITUDE, WEATHER_LONGITUDE);
 
   http.begin(url);
-  http.GET(); //TODO - check status code!
+  int httpCode = http.GET();
 
-  DeserializationError error = deserializeJson( doc, http.getStream(), 
+  if (httpCode != HTTP_CODE_OK) {
+    Serial.printf("HTTP error: %d\n", httpCode);
+    logStatusMessage("Weather HTTP error!");
+    weatherFailed = true;
+    failCount++;
+    http.end();
+    return;
+  }
+
+  DeserializationError error = deserializeJson(doc, http.getStream(),
           DeserializationOption::Filter(filter));
+
+  http.end();
 
   if (error) {
     Serial.print(F("deserialization failed: "));
     Serial.println(error.f_str());
     logStatusMessage("Weather data error!");
-    weatherFailed = true; //The next ~15 lines of code are to give the weather pull a couple more tries before giving up
+    weatherFailed = true;
     failCount++;
   }
 
@@ -349,59 +344,30 @@ void getAccuWeatherData() {
     logStatusMessage("Weather success!");
     weatherFailed = false;
     failCount = 0;
-    
   }
+
   if (weatherFailed && failCount > 3) {
     delay(5000);
     logStatusMessage("Weather trying again");
-    getAccuWeatherData();
+    getWeatherData();
+    return;
   }
 
-  doc.shrinkToFit();
+  // Populate the variables from Open-Meteo response
+  JsonArray weatherCodes = doc["daily"]["weather_code"];
+  JsonArray tempMax = doc["daily"]["temperature_2m_max"];
+  JsonArray tempMin = doc["daily"]["temperature_2m_min"];
 
-  //Just in case we need to debug...
-  //serializeJsonPretty(doc, Serial);
+  minTempToday = round(tempMin[0].as<double>());
+  maxTempToday = round(tempMax[0].as<double>());
 
-  //Populate the variables: 
-  minTempToday = round( double(doc["DailyForecasts"][0]["Temperature"]["Minimum"]["Value"]) );
-  maxTempToday = round( double(doc["DailyForecasts"][0]["Temperature"]["Maximum"]["Value"]) );
-  
   Serial.println(minTempToday);
   Serial.println(maxTempToday);
 
-  for (int i=0; i<5; i++) {
-    forecast5Days[i] = accuWeatherIconMapping(doc["DailyForecasts"][i]["Day"]["Icon"]);
+  for (int i = 0; i < 5; i++) {
+    forecast5Days[i] = openMeteoIconMapping(weatherCodes[i].as<int>());
+    minTemp[i] = round(tempMin[i].as<double>());
+    maxTemp[i] = round(tempMax[i].as<double>());
   }
-  for (int i=0; i<5; i++) {
-    minTemp[i] = round( double(doc["DailyForecasts"][i]["Temperature"]["Minimum"]["Value"]) );
-    maxTemp[i] = round( double(doc["DailyForecasts"][i]["Temperature"]["Maximum"]["Value"]) );
-  }
-}
-
-/* Start of code to get data from openweathermap - based on work by https://github.com/lefty01 
-*/
-void getOpenWeatherData() { /*
-  // sanity check units ...
-  // strcmp(units, "standard") ... "metric", or "imperial"
-  snprintf(url, 128, "http://api.openweathermap.org/data/2.5/forecast?id=%u&units=%s&appid=%s",
-	   loc_id, units, appid);
-
-  
-  // Allocate the largest possible document (platform dependent)
-  // DynamicJsonDocument doc(ESP.getMaxFreeBlockSize());
-  DynamicJsonDocument doc(8192);
-
-  http.useHTTP10(true);
-  http.begin(url);
-  http.GET();
-
-  DeserializationError error = deserializeJson(doc, http.getStream(),
-					       DeserializationOption::Filter(filter));
-  if (error) {
-    Serial.print(F("deserializeJson() failed: "));
-    Serial.println(error.f_str());
-    return 1;
-  }
-  */
 }
 
