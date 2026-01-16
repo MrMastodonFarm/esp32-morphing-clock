@@ -134,7 +134,10 @@
 #define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
 
 // How often to refresh weather forecast data
-// (limited by API throttling)
 #define WEATHER_REFRESH_INTERVAL_SEC 3600
+
+// Open-Meteo location (Alexandria, VA)
+#define WEATHER_LATITUDE "38.8048"
+#define WEATHER_LONGITUDE "-77.0469"
 
 #endif

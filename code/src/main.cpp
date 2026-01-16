@@ -86,7 +86,7 @@ void setup(){
   logStatusMessage("NTP done!");
 
   logStatusMessage("Getting weather...");
-  getAccuWeatherData();
+  getOpenMeteoData();
   lastWeatherUpdate = millis();
   logStatusMessage("Weather recvd!");
 
@@ -147,7 +147,7 @@ void loop() {
   // Periodically refresh weather forecast
   if (millis() - lastWeatherUpdate > 1000 * WEATHER_REFRESH_INTERVAL_SEC) {
     logStatusMessage("Weather refresh");
-    getAccuWeatherData();
+    getOpenMeteoData();
     displayWeatherData();
     lastWeatherUpdate = millis();
   }
