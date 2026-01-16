@@ -3,6 +3,7 @@
 #include "creds_accuweather.h"
 
 #include <HTTPClient.h>
+#include <WiFiClientSecure.h>
 #include <ArduinoJson.h>
 //#include <Fonts/FreeSerifBold12pt7b.h>
 
@@ -303,11 +304,23 @@ void getAccuWeatherData() {
 	]
   } */
 
-  snprintf( url, 256, "http://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=%s&metric=false", 
+  snprintf( url, 256, "https://dataservice.accuweather.com/forecasts/v1/daily/5day/%s?apikey=%s&metric=false",
       ACCUWEATHER_CITY_CODE, ACCUWEATHER_API_KEY);
 
-  http.begin(url);
-  http.GET(); //TODO - check status code!
+  WiFiClientSecure *client = new WiFiClientSecure;
+  client->setInsecure();  // Skip certificate verification (acceptable for weather data)
+  http.begin(*client, url);
+
+  int httpCode = http.GET();
+  if (httpCode != 200) {
+    Serial.printf("Weather HTTP error: %d\n", httpCode);
+    logStatusMessage("Weather HTTP error!");
+    weatherFailed = true;
+    failCount++;
+    http.end();
+    delete client;
+    return;
+  }
 
   DeserializationError error = deserializeJson( doc, http.getStream(), 
           DeserializationOption::Filter(filter));
@@ -324,8 +337,12 @@ void getAccuWeatherData() {
     logStatusMessage("Weather success!");
     weatherFailed = false;
     failCount = 0;
-    
+
   }
+
+  http.end();
+  delete client;
+
   if (weatherFailed && failCount > 3) {
     delay(5000);
     logStatusMessage("Weather trying again");
@@ -337,10 +354,10 @@ void getAccuWeatherData() {
   //Just in case we need to debug...
   //serializeJsonPretty(doc, Serial);
 
-  //Populate the variables: 
+  //Populate the variables:
   minTempToday = round( double(doc["DailyForecasts"][0]["Temperature"]["Minimum"]["Value"]) );
   maxTempToday = round( double(doc["DailyForecasts"][0]["Temperature"]["Maximum"]["Value"]) );
-  
+
   Serial.println(minTempToday);
   Serial.println(maxTempToday);
 
