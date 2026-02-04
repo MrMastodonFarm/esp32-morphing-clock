@@ -2,7 +2,15 @@
   "permissions": {
     "allow": [
       "Bash(pio run:*)",
-      "Bash(~/.platformio/penv/Scripts/pio.exe run:*)"
+      "Bash(~/.platformio/penv/Scripts/pio.exe run:*)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nEnable WebSerial for WiFi-based terminal output\n\n- Added WebSerial v2 library and async dependencies to platformio.ini\n- Enabled WebSerial server at /webserial endpoint in main.cpp\n- Added WebSerial output to logStatusMessage and MQTT callbacks\n- Updated CLAUDE.md with accurate docs \\(Open-Meteo API, MQTT topics\\)\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(git push:*)",
+      "Bash(gh auth status:*)",
+      "Bash(gh auth:*)",
+      "Bash(git commit -m \"$\\(cat <<''EOF''\nAdd ArduinoOTA support for WiFi firmware uploads\n\n- Added ArduinoOTA initialization with progress/error callbacks\n- Display ticker detached during OTA to prevent interference\n- Added [env:ota] environment in platformio.ini for easy WiFi uploads\n- Usage: pio run -e ota --target upload\n\nCo-Authored-By: Claude Opus 4.5 <noreply@anthropic.com>\nEOF\n\\)\")",
+      "Bash(/c/Users/rober/.platformio/penv/Scripts/pio.exe run:*)",
+      "Bash(git commit:*)"
     ]
   }
 }
