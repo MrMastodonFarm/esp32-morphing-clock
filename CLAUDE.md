@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ESP32-based morphing digital clock displayed on a 128x64 HUB75 RGB LED matrix. The clock shows time with morphing animations, date, weather forecasts (via AccuWeather API), and sensor data (received via MQTT from external sensors).
+ESP32-based morphing digital clock displayed on a 128x64 HUB75 RGB LED matrix. Features morphing 7-segment digit animations, date display, weather forecasts (via Open-Meteo API), and real-time data via MQTT (temperature/humidity sensors, train times, calendar events, flight info).
 
 ## Build Commands
 
@@ -16,55 +16,58 @@ pio run --target upload    # Build and upload via USB
 pio monitor                # Serial monitor (115200 baud)
 ```
 
-For OTA updates: `./ota_build.sh` (requires MQTT server and Docker nginx container for firmware hosting)
-
-## Project Structure
-
-```
-code/                      # PlatformIO firmware project
-├── src/                   # C++ source files
-├── include/               # Headers and configuration
-│   ├── config.h           # Display layout, colors, pins, intervals
-│   ├── creds_*.h          # Credentials (create from .sample files)
-│   └── common.h           # Global state and extern declarations
-├── platformio.ini         # Build configuration
-└── ota_build.sh           # OTA deployment script
-pcb/                       # Eagle CAD schematics for ESP32-Matrix shield
-case/                      # Laser-cut enclosure drawings (DWG)
-```
+**OTA Updates:** Trigger via MQTT message to `MorphingClock/update/req` with payload `1`. Requires firmware hosted at URL defined in `OTA_URL` (creds_mqtt.h).
 
 ## Architecture
 
-**Main modules:**
-- `main.cpp` - Entry point, setup/loop, periodic task scheduling (NTP, weather updates)
-- `clock.cpp` - Morphing digit animation (7-segment style transitions)
-- `rgb_display.cpp` - HUB75 matrix abstraction using ESP32 DMA library
-- `mqtt.cpp` - MQTT callbacks for sensor data, train times, calendar, flights, OTA triggers
-- `weather.cpp` - AccuWeather API integration for 5-day forecasts
-- `digit.cpp` - 7-segment digit rendering
+**Event-driven display updates:** MQTT callbacks set flags (`newSensorData`, `newTrainData`, `newCalendarData`, `newFlightNumber`) in `common.h`. Main loop checks flags and redraws only changed display sections.
 
-**Data flow:**
-1. MQTT callbacks set global variables and flags in `common.h`
-2. Main loop checks flags and calls display update functions
-3. 30ms ticker drives `displayUpdater()` for smooth animations
+**Timing:** 30ms Ticker calls `displayUpdater()` for morphing clock animations. Main loop runs at 500ms intervals with watchdog reset (60s timeout).
 
-**Key globals (in common.h):** Display flags like `newSensorData`, `newTrainData` trigger section redraws when set to true.
+**Key modules:**
+- `main.cpp` - Setup, main loop, periodic NTP/weather refresh scheduling
+- `clock.cpp` / `digit.cpp` - Morphing 7-segment digit rendering and animation
+- `rgb_display.cpp` - HUB75 matrix abstraction (ESP32 DMA library)
+- `mqtt.cpp` - All MQTT topic subscriptions and callback handlers
+- `weather.cpp` - Open-Meteo API fetch, WMO weather code mapping to icons
+
+**Display layout** is defined in `config.h` with `*_X`, `*_Y`, `*_WIDTH`, `*_HEIGHT` constants for each element (clock, date, sensors, weather, etc.).
 
 ## Configuration
 
-- **Display layout/colors:** `include/config.h` (positions, color565 values, pin assignments)
-- **Credentials:** Create `creds_mqtt.h` and `creds_accuweather.h` from `.sample` files
-- **Timezone:** Configured in `config.h` (default: EST with DST support)
+**`include/config.h`:**
+- Display positions, colors (color565 format), pin assignments
+- Timing intervals: `NTP_REFRESH_INTERVAL_SEC`, `WEATHER_REFRESH_INTERVAL_SEC`, `SENSOR_DEAD_INTERVAL_SEC`
+- Weather location: `WEATHER_LATITUDE`, `WEATHER_LONGITUDE`
+- Timezone: `TIMEZONE_DELTA_SEC`, `TIMEZONE_DST_SEC`
 
-## External Dependencies
+**`include/creds_mqtt.h`:** (create from existing file, update values)
+- WiFi: `WIFI_SSID`, `WIFI_PASSWORD`
+- MQTT: `MQTT_SERVER`, `MQTT_PORT`, `MQTT_USERNAME`, `MQTT_PASSWORD`
+- OTA: `OTA_URL` - HTTP URL where firmware.bin is hosted
+- All MQTT topic definitions (`MQTT_*_TOPIC`)
 
-- MQTT server for receiving sensor data and triggering OTA updates
-- AccuWeather API key for weather forecasts
-- Optional: TSL2591 I2C light sensor for ambient light detection
+**Optional SSL:** Uncomment `#define MQTT_USE_SSL` in config.h, create certificate files from `.sample` templates.
+
+## MQTT Topics
+
+Default topic prefix: `MorphingClock/` (configurable via `MQTT_CLIENT_ID`)
+
+| Topic | Payload | Description |
+|-------|---------|-------------|
+| `.../sensor/temperature` | float | Outdoor temp (triggers display update) |
+| `.../sensor/humidity` | int | Outdoor humidity |
+| `.../sensor/train1-4` | int | Yellow line train arrival times |
+| `.../sensor/bluetrain1-4` | int | Blue line train arrival times |
+| `.../sensor/vacationCalendarEvent` | string | Next calendar event name |
+| `.../sensor/vacationCalendarDaysTill` | int | Days until next event |
+| `.../lastFlight/flightNumber` | string | Flight number display |
+| `.../lastFlight/destination` | string | Flight destination code |
+| `.../update/req` | "1" | Trigger OTA update |
 
 ## Hardware
 
-- ESP32 dev board
-- 128x64 HUB75 RGB LED matrix panel
+- ESP32 dev board (pins defined in ESP32 HUB75 DMA library defaults)
+- 128x64 HUB75 RGB LED matrix (two 64x64 panels chained, or one 128x64)
 - Custom PCB shield (schematics in `pcb/`)
-- Optional: TSL2591 light sensor, buzzer
+- Optional: TSL2591 I2C light sensor (currently disabled in code)

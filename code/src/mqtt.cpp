@@ -8,9 +8,9 @@
 #include "creds_mqtt.h"
 #include "ota_update.h"
 
-//#include <AsyncTCP.h>
-//#include <ESPAsyncWebServer.h>
-//#include <WebSerial.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSerial.h>
 
 char mqtt_buffer[MQTT_BUFMAX];
 
@@ -23,7 +23,15 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-  //WebSerial.println("MQTT Message");
+
+  // Also log to WebSerial
+  WebSerial.print("MQTT [");
+  WebSerial.print(topic);
+  WebSerial.print("] ");
+  for (unsigned int i = 0; i < length; i++) {
+    WebSerial.print((char)payload[i]);
+  }
+  WebSerial.println();
 
   if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
     payload[length]=0;

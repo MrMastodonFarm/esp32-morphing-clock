@@ -26,11 +26,11 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "clock.h"
 #include "weather.h"
 
-//#include <AsyncTCP.h>
-//#include <ESPAsyncWebServer.h>
-//#include <WebSerial.h>
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSerial.h>
 
-//AsyncWebServer server(80);
+AsyncWebServer server(80);
 
 void recvMsg(uint8_t *data, size_t len){
   //WebSerial.println("Received Data...");
@@ -76,9 +76,10 @@ void setup(){
   logStatusMessage("WiFi connected!");
 
   // WebSerial is accessible at "<IP Address>/webserial" in browser
-  //WebSerial.begin(&server);
-  //WebSerial.msgCallback(recvMsg);
-  //server.begin();
+  WebSerial.begin(&server);
+  WebSerial.onMessage(recvMsg);
+  server.begin();
+  Serial.println("WebSerial started at /webserial");
 
   logStatusMessage("NTP time...");
   configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
