@@ -5,9 +5,9 @@
 
 #include "common.h"
 
-//#include <AsyncTCP.h>
-//#include <ESPAsyncWebServer.h>
-//#include <WebSerial.h> 
+#include <AsyncTCP.h>
+#include <ESPAsyncWebServer.h>
+#include <WebSerial.h>
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
@@ -44,7 +44,7 @@ void display_init() {
 
 void logStatusMessage(const char *message) {
   Serial.println(message);
-  //WebSerial.println(message);
+  WebSerial.println(message);
   // Clear the last line first!
   dma_display->fillRect(0, 56, 128, 8, 0);
 
@@ -65,7 +65,7 @@ void logStatusMessage(const char *message) {
 
 void logStatusMessage(String message) {
   Serial.println(message);
-  //WebSerial.println(message);
+  WebSerial.println(message);
   // Clear the last line first!
   dma_display->fillRect(0, 56, 128, 8, 0);
 
