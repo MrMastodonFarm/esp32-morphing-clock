@@ -140,4 +140,9 @@
 #define WEATHER_LATITUDE "38.8048"
 #define WEATHER_LONGITUDE "-77.0469"
 
+// Night time hours for moon phase display
+// During night hours, the main weather icon shows moon phase instead of weather
+#define NIGHT_START_HOUR 20  // 8 PM - when night begins
+#define NIGHT_END_HOUR 7     // 7 AM - when night ends
+
 #endif

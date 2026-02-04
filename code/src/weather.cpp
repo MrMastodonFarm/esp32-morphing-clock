@@ -5,6 +5,7 @@
 #include <HTTPClient.h>
 #include <WiFi.h>
 #include <ArduinoJson.h>
+#include <math.h>
 //#include <Fonts/FreeSerifBold12pt7b.h>
 
 uint8_t forecast5Days[5] = {0,0,0,0,0};
@@ -126,14 +127,115 @@ uint32_t static snow_8x8[] = {
 };
 
 uint32_t static heart_8x8[] = {
-  0x000000, 0xFF0000, 0xFF0000, 0x000000, 0xFF0000, 0xFF0000, 0x000000, 0x000000, 
-  0xFF0000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000, 0xFF0000, 0x000000, 
-  0xFF0000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 
-  0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000, 
-  0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000, 
-  0x000000, 0x000000, 0xFF0000, 0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 
-  0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 0x000000, 
+  0x000000, 0xFF0000, 0xFF0000, 0x000000, 0xFF0000, 0xFF0000, 0x000000, 0x000000,
+  0xFF0000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000, 0xFF0000, 0x000000,
+  0xFF0000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000,
+  0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000,
+  0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000,
+  0x000000, 0x000000, 0xFF0000, 0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000,
+  0x000000, 0x000000, 0x000000, 0xFF0000, 0x000000, 0x000000, 0x000000, 0x000000,
   0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
+};
+
+// Moon phase bitmaps (8x8)
+// Moon colors: 0xFFFFC0 = pale yellow (lit), 0x303030 = dark gray (shadow)
+#define MOON_LIT 0xFFFFC0
+#define MOON_SHADOW 0x303030
+
+// New Moon (phase 0) - mostly dark with faint outline
+uint32_t static moon_new_8x8[] = {
+  0x000000, 0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000, 0x000000,
+  0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000,
+  0x000000, 0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000, 0x000000,
+};
+
+// Waxing Crescent (phase 1) - small sliver lit on right
+uint32_t static moon_waxing_crescent_8x8[] = {
+  0x000000, 0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000, 0x000000,
+  0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, 0x000000,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT,
+  0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, 0x000000,
+  0x000000, 0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000, 0x000000,
+};
+
+// First Quarter (phase 2) - right half lit
+uint32_t static moon_first_quarter_8x8[] = {
+  0x000000, 0x000000, 0x303030, 0x303030, MOON_LIT, MOON_LIT, 0x000000, 0x000000,
+  0x000000, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000,
+  0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x000000, 0x303030, 0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000,
+  0x000000, 0x000000, 0x303030, 0x303030, MOON_LIT, MOON_LIT, 0x000000, 0x000000,
+};
+
+// Waxing Gibbous (phase 3) - mostly lit, small shadow on left
+uint32_t static moon_waxing_gibbous_8x8[] = {
+  0x000000, 0x000000, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000, 0x000000,
+  0x000000, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000,
+  0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x303030, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x000000, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000,
+  0x000000, 0x000000, 0x303030, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000, 0x000000,
+};
+
+// Full Moon (phase 4) - fully lit
+uint32_t static moon_full_8x8[] = {
+  0x000000, 0x000000, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000, 0x000000,
+  0x000000, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT,
+  0x000000, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000,
+  0x000000, 0x000000, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x000000, 0x000000,
+};
+
+// Waning Gibbous (phase 5) - mostly lit, small shadow on right
+uint32_t static moon_waning_gibbous_8x8[] = {
+  0x000000, 0x000000, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x000000, 0x000000,
+  0x000000, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x000000,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030,
+  0x000000, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x000000,
+  0x000000, 0x000000, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x000000, 0x000000,
+};
+
+// Last Quarter (phase 6) - left half lit
+uint32_t static moon_last_quarter_8x8[] = {
+  0x000000, 0x000000, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x000000, 0x000000,
+  0x000000, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x000000,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030,
+  0x000000, MOON_LIT, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x000000,
+  0x000000, 0x000000, MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x000000, 0x000000,
+};
+
+// Waning Crescent (phase 7) - small sliver lit on left
+uint32_t static moon_waning_crescent_8x8[] = {
+  0x000000, 0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000, 0x000000,
+  0x000000, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000,
+  MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  MOON_LIT, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030,
+  0x000000, MOON_LIT, 0x303030, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000,
+  0x000000, 0x000000, 0x303030, 0x303030, 0x303030, 0x303030, 0x000000, 0x000000,
 };
 
 // Get color565 directly from 24-bit RGB value
@@ -152,6 +254,68 @@ void drawTestBitmap() {
   drawBitmap(BITMAP_X+36, BITMAP_Y, 8, 8, snow_8x8);
   drawBitmap(BITMAP_X+45, BITMAP_Y, 8, 8, storm_8x8);*/
   //drawBitmap(BITMAP_X+58, BITMAP_Y, 12, 20, minion);
+}
+
+// Calculate moon phase (0-7) based on current date
+// Uses a known new moon reference date (Jan 6, 2000) and the synodic month (~29.53 days)
+// Returns: 0=new, 1=waxing crescent, 2=first quarter, 3=waxing gibbous,
+//          4=full, 5=waning gibbous, 6=last quarter, 7=waning crescent
+uint8_t getMoonPhase() {
+  // Reference: Jan 6, 2000 was a new moon
+  // Calculate days since reference using timeinfo
+  int year = timeinfo.tm_year + 1900;
+  int month = timeinfo.tm_mon + 1;
+  int day = timeinfo.tm_mday;
+
+  // Convert to Julian Day Number (simplified calculation)
+  int a = (14 - month) / 12;
+  int y = year + 4800 - a;
+  int m = month + 12 * a - 3;
+  long jd = day + (153 * m + 2) / 5 + 365 * y + y / 4 - y / 100 + y / 400 - 32045;
+
+  // Reference JD for Jan 6, 2000 (known new moon)
+  long refJd = 2451550;
+
+  // Days since reference new moon
+  double daysSinceNew = (double)(jd - refJd);
+
+  // Synodic month is approximately 29.53 days
+  double synodicMonth = 29.53058867;
+
+  // Calculate position in current lunar cycle (0.0 to 1.0)
+  double lunarAge = fmod(daysSinceNew, synodicMonth);
+  if (lunarAge < 0) lunarAge += synodicMonth;
+
+  // Convert to phase (0-7)
+  double phase = lunarAge / synodicMonth * 8.0;
+  return (uint8_t)phase % 8;
+}
+
+// Check if it's currently night time
+bool isNightTime() {
+  int hour = timeinfo.tm_hour;
+  // Night is between NIGHT_START_HOUR (evening) and NIGHT_END_HOUR (morning)
+  return (hour >= NIGHT_START_HOUR || hour < NIGHT_END_HOUR);
+}
+
+// Draw moon phase icon
+void drawMoonPhase(int startx, int starty, int width, int height, bool enlarged) {
+  uint8_t phase = getMoonPhase();
+  uint32_t* moonBitmap;
+
+  switch (phase) {
+    case 0: moonBitmap = moon_new_8x8; break;
+    case 1: moonBitmap = moon_waxing_crescent_8x8; break;
+    case 2: moonBitmap = moon_first_quarter_8x8; break;
+    case 3: moonBitmap = moon_waxing_gibbous_8x8; break;
+    case 4: moonBitmap = moon_full_8x8; break;
+    case 5: moonBitmap = moon_waning_gibbous_8x8; break;
+    case 6: moonBitmap = moon_last_quarter_8x8; break;
+    case 7: moonBitmap = moon_waning_crescent_8x8; break;
+    default: moonBitmap = moon_full_8x8; break;
+  }
+
+  drawBitmap(startx, starty, width, height, moonBitmap, enlarged);
 }
 
 // Draw one of the available weather icons in the specified space
@@ -180,7 +344,15 @@ void drawWeatherIcon(int startx, int starty, int width, int height, uint8_t icon
 }
 
 void displayTodaysWeather() {
-  drawWeatherIcon(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, forecast5Days[0], true);
+  // Clear the area first (16x16 for enlarged icon)
+  dma_display->fillRect(WEATHER_TODAY_X, WEATHER_TODAY_Y, 16, 16, 0);
+
+  // At night, show moon phase instead of weather
+  if (isNightTime()) {
+    drawMoonPhase(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, true);
+  } else {
+    drawWeatherIcon(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, forecast5Days[0], true);
+  }
 }
 
 void displayTodaysTempRange() {
