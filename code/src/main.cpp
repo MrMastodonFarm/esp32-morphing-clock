@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <Ticker.h>
 #include <esp_task_wdt.h>
+#include <ArduinoOTA.h>
 
 #include "main.h"
 #include "common.h"
@@ -81,6 +82,34 @@ void setup(){
   server.begin();
   Serial.println("WebSerial started at /webserial");
 
+  // ArduinoOTA for WiFi firmware uploads
+  logStatusMessage("Setting up OTA...");
+  ArduinoOTA.setHostname("MorphingClock");
+  ArduinoOTA.onStart([]() {
+    String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
+    Serial.println("OTA Start: " + type);
+    logStatusMessage("OTA Starting...");
+    displayTicker.detach();  // Stop display updates during OTA
+  });
+  ArduinoOTA.onEnd([]() {
+    Serial.println("\nOTA End");
+    logStatusMessage("OTA Complete!");
+  });
+  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
+    Serial.printf("OTA Progress: %u%%\r", (progress / (total / 100)));
+  });
+  ArduinoOTA.onError([](ota_error_t error) {
+    Serial.printf("OTA Error[%u]: ", error);
+    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
+    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
+    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
+    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
+    else if (error == OTA_END_ERROR) Serial.println("End Failed");
+    logStatusMessage("OTA Error!");
+  });
+  ArduinoOTA.begin();
+  Serial.println("ArduinoOTA ready");
+
   logStatusMessage("NTP time...");
   configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
   lastNTPUpdate = millis();
@@ -120,7 +149,9 @@ void setup(){
 
 uint8_t wheelval = 0;
 void loop() {
-   if (WiFi.status() != WL_CONNECTED) {
+  ArduinoOTA.handle();  // Check for OTA updates
+
+  if (WiFi.status() != WL_CONNECTED) {
     logStatusMessage("WiFi lost!");
     WiFi.reconnect();
   }
