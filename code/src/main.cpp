@@ -16,8 +16,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <esp_task_wdt.h>
-#include <ArduinoOTA.h>
-#include <ESPmDNS.h>
+#include <esp_wifi.h>
 
 #include "main.h"
 #include "common.h"
@@ -26,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "creds_mqtt.h"
 #include "clock.h"
 #include "weather.h"
+
 unsigned long prevEpoch;
 unsigned long lastNTPUpdate;
 unsigned long lastWeatherUpdate;
@@ -33,6 +33,25 @@ unsigned long lastDisplayUpdate;
 
 //Just a blinking heart to show the main thread is still alive...
 bool blinkOn;
+
+// WiFi event handler for automatic reconnection
+void WiFiEvent(WiFiEvent_t event) {
+  switch (event) {
+    case ARDUINO_EVENT_WIFI_STA_DISCONNECTED:
+      Serial.println("WiFi disconnected, reconnecting...");
+      WiFi.reconnect();
+      break;
+    case ARDUINO_EVENT_WIFI_STA_CONNECTED:
+      Serial.println("WiFi reconnected");
+      break;
+    case ARDUINO_EVENT_WIFI_STA_GOT_IP:
+      Serial.print("WiFi got IP: ");
+      Serial.println(WiFi.localIP());
+      break;
+    default:
+      break;
+  }
+}
 
 void setup(){
   display_init();
@@ -48,6 +67,12 @@ void setup(){
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
   WiFi.setHostname(hostname.c_str()); //define hostname
 
+  // Register WiFi event handler for automatic reconnection
+  WiFi.onEvent(WiFiEvent);
+
+  // Enable auto-reconnect
+  WiFi.setAutoReconnect(true);
+
   logStatusMessage("Connecting to WiFi...");
   Serial.print("Connecting to ");
   Serial.println(WIFI_SSID);
@@ -60,44 +85,13 @@ void setup(){
   Serial.println("WiFi connected.");
   logStatusMessage("WiFi connected!");
 
-  // Disable WiFi power saving for reliable OTA and low latency
+  // Boost TX power to maximum for better range
+  WiFi.setTxPower(WIFI_POWER_19_5dBm);
+  Serial.println("WiFi TX power set to 19.5 dBm");
+
+  // Disable WiFi power saving for low latency
   WiFi.setSleep(false);
   Serial.println("WiFi power saving disabled");
-
-  // Initialize mDNS (required for ArduinoOTA)
-  if (!MDNS.begin("MorphingClock")) {
-    Serial.println("Error starting mDNS");
-  } else {
-    Serial.println("mDNS started: MorphingClock.local");
-  }
-
-  // ArduinoOTA for WiFi firmware uploads
-  logStatusMessage("Setting up OTA...");
-  ArduinoOTA.setPort(3232);  // Explicit port
-  ArduinoOTA.setHostname("MorphingClock");
-  ArduinoOTA.onStart([]() {
-    String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
-    Serial.println("OTA Start: " + type);
-    logStatusMessage("OTA Starting...");
-  });
-  ArduinoOTA.onEnd([]() {
-    Serial.println("\nOTA End");
-    logStatusMessage("OTA Complete!");
-  });
-  ArduinoOTA.onProgress([](unsigned int progress, unsigned int total) {
-    Serial.printf("OTA Progress: %u%%\r", (progress / (total / 100)));
-  });
-  ArduinoOTA.onError([](ota_error_t error) {
-    Serial.printf("OTA Error[%u]: ", error);
-    if (error == OTA_AUTH_ERROR) Serial.println("Auth Failed");
-    else if (error == OTA_BEGIN_ERROR) Serial.println("Begin Failed");
-    else if (error == OTA_CONNECT_ERROR) Serial.println("Connect Failed");
-    else if (error == OTA_RECEIVE_ERROR) Serial.println("Receive Failed");
-    else if (error == OTA_END_ERROR) Serial.println("End Failed");
-    logStatusMessage("OTA Error!");
-  });
-  ArduinoOTA.begin();
-  Serial.println("ArduinoOTA ready on port 3232");
 
   logStatusMessage("NTP time...");
   configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
@@ -138,20 +132,15 @@ void setup(){
 
 uint8_t wheelval = 0;
 void loop() {
-  ArduinoOTA.handle();  // Check for OTA updates
-
   // Update display at regular intervals (replaces Ticker to avoid ISR context issues)
   if (millis() - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL_MS) {
     displayUpdater();
     lastDisplayUpdate = millis();
   }
 
-  if (WiFi.status() != WL_CONNECTED) {
-    logStatusMessage("WiFi lost!");
-    WiFi.reconnect();
-  }
-
-  if ( !client.connected() ) {
+  // WiFi reconnection is handled by event callback (WiFiEvent)
+  // Only reconnect MQTT if WiFi is connected
+  if (WiFi.status() == WL_CONNECTED && !client.connected()) {
     logStatusMessage("MQTT lost");
     reconnect();
   }
