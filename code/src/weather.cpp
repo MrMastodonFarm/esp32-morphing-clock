@@ -137,6 +137,152 @@ uint32_t static heart_8x8[] = {
   0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000, 0x000000
 };
 
+// ============================================================================
+// Native 16x16 weather icons (for display without scaling)
+// ============================================================================
+
+#define _ 0x000000      // Black (background)
+#define Y 0xFFFF00      // Yellow (sun)
+#define O 0xFFA000      // Orange (sun accent)
+#define C 0x00DDFF      // Cyan (cloud)
+#define W 0xFFFFFF      // White (cloud highlight)
+#define G 0x808090      // Gray (cloud shadow)
+#define B 0x0080FF      // Blue (rain)
+#define P 0x8000FF      // Purple (shower cloud)
+#define L 0x00FFFF      // Light blue (lightning glow)
+#define S 0xA0A0FF      // Snow color
+
+// Sun 16x16 - bright sun with rays
+uint32_t static sun_16x16[] = {
+  _,_,_,_,_,_,Y,_,_,Y,_,_,_,_,_,_,
+  _,_,Y,_,_,_,_,Y,Y,_,_,_,_,Y,_,_,
+  _,_,_,Y,_,_,_,_,_,_,_,_,Y,_,_,_,
+  _,_,_,_,_,_,Y,Y,Y,Y,_,_,_,_,_,_,
+  _,_,_,_,_,Y,Y,Y,Y,Y,Y,_,_,_,_,_,
+  _,_,_,_,Y,Y,Y,O,O,Y,Y,Y,_,_,_,_,
+  Y,_,_,Y,Y,Y,O,O,O,O,Y,Y,Y,_,_,Y,
+  _,Y,_,Y,Y,O,O,O,O,O,O,Y,Y,_,Y,_,
+  _,Y,_,Y,Y,O,O,O,O,O,O,Y,Y,_,Y,_,
+  Y,_,_,Y,Y,Y,O,O,O,O,Y,Y,Y,_,_,Y,
+  _,_,_,_,Y,Y,Y,O,O,Y,Y,Y,_,_,_,_,
+  _,_,_,_,_,Y,Y,Y,Y,Y,Y,_,_,_,_,_,
+  _,_,_,_,_,_,Y,Y,Y,Y,_,_,_,_,_,_,
+  _,_,_,Y,_,_,_,_,_,_,_,_,Y,_,_,_,
+  _,_,Y,_,_,_,_,Y,Y,_,_,_,_,Y,_,_,
+  _,_,_,_,_,_,Y,_,_,Y,_,_,_,_,_,_,
+};
+
+// Cloud 16x16 - fluffy cloud with shading
+uint32_t static cloud_16x16[] = {
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,C,C,C,C,_,_,_,_,_,_,_,
+  _,_,_,_,C,W,W,W,W,C,_,_,_,_,_,_,
+  _,_,_,C,W,W,W,W,W,W,C,C,C,_,_,_,
+  _,_,C,W,W,W,W,W,W,W,W,W,W,C,_,_,
+  _,C,W,W,W,W,W,W,W,W,W,W,W,W,C,_,
+  _,C,W,W,W,W,W,W,W,W,W,W,W,W,C,_,
+  C,W,W,W,W,W,W,W,W,W,W,W,W,W,W,C,
+  C,W,W,W,W,W,W,W,W,W,W,W,W,W,W,C,
+  C,C,W,W,W,W,W,W,W,W,W,W,W,W,C,C,
+  _,C,C,C,C,C,C,C,C,C,C,C,C,C,C,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+};
+
+// Showers 16x16 - cloud with scattered rain drops
+uint32_t static showers_16x16[] = {
+  _,_,_,_,_,P,P,P,P,_,_,_,_,_,_,_,
+  _,_,_,_,P,P,P,P,P,P,_,_,_,_,_,_,
+  _,_,_,P,P,P,P,P,P,P,P,P,P,_,_,_,
+  _,_,P,P,P,P,P,P,P,P,P,P,P,P,_,_,
+  _,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_,
+  _,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_,
+  P,P,P,P,P,P,P,P,P,P,P,P,P,P,P,P,
+  _,P,P,P,P,P,P,P,P,P,P,P,P,P,P,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,B,_,_,_,B,_,_,_,B,_,_,_,_,_,
+  _,_,B,_,_,_,B,_,_,_,B,_,_,_,B,_,
+  _,_,_,_,B,_,_,_,B,_,_,_,B,_,_,_,
+  _,_,_,_,B,_,_,_,B,_,_,_,B,_,_,_,
+  _,B,_,_,_,_,B,_,_,_,B,_,_,_,_,_,
+  _,B,_,_,_,_,B,_,_,_,B,_,_,_,B,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+};
+
+// Rain 16x16 - heavy rain diagonal pattern
+uint32_t static rain_16x16[] = {
+  _,_,B,_,_,_,B,_,_,_,B,_,_,_,B,_,
+  _,_,B,_,_,_,B,_,_,_,B,_,_,_,B,_,
+  _,B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,
+  _,B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,
+  B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,_,
+  B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,_,
+  _,_,_,B,_,_,_,B,_,_,_,B,_,_,_,B,
+  _,_,_,B,_,_,_,B,_,_,_,B,_,_,_,B,
+  _,_,B,_,_,_,B,_,_,_,B,_,_,_,B,_,
+  _,_,B,_,_,_,B,_,_,_,B,_,_,_,B,_,
+  _,B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,
+  _,B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,
+  B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,_,
+  B,_,_,_,B,_,_,_,B,_,_,_,B,_,_,_,
+  _,_,_,B,_,_,_,B,_,_,_,B,_,_,_,B,
+  _,_,_,B,_,_,_,B,_,_,_,B,_,_,_,B,
+};
+
+// Storm 16x16 - lightning bolt
+uint32_t static storm_16x16[] = {
+  _,_,_,_,_,_,_,_,_,Y,Y,Y,_,_,_,_,
+  _,_,_,_,_,_,_,_,Y,Y,Y,_,_,_,_,_,
+  _,_,_,_,_,_,_,Y,Y,Y,_,_,_,_,_,_,
+  _,_,_,_,_,_,Y,Y,Y,_,_,_,_,_,_,_,
+  _,_,_,_,_,Y,Y,Y,_,_,_,_,_,_,_,_,
+  _,_,_,_,Y,Y,Y,_,_,_,_,_,_,_,_,_,
+  _,_,_,Y,Y,Y,Y,Y,Y,Y,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,Y,Y,Y,_,_,_,_,_,_,
+  _,_,_,_,_,_,Y,Y,Y,_,_,_,_,_,_,_,
+  _,_,_,_,_,Y,Y,Y,_,_,_,_,_,_,_,_,
+  _,_,_,_,Y,Y,Y,_,_,_,_,_,_,_,_,_,
+  _,_,_,Y,Y,Y,_,_,_,_,_,_,_,_,_,_,
+  _,_,Y,Y,Y,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,Y,Y,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,Y,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+};
+
+// Snow 16x16 - snowflakes pattern
+uint32_t static snow_16x16[] = {
+  _,_,_,S,_,_,_,_,_,_,_,_,S,_,_,_,
+  _,_,S,S,S,_,_,_,_,_,_,S,S,S,_,_,
+  _,_,_,S,_,_,_,S,_,_,_,_,S,_,_,_,
+  _,_,_,_,_,_,S,S,S,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,S,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,_,S,_,_,_,_,_,_,_,S,_,_,_,_,
+  _,_,S,S,S,_,_,_,_,_,S,S,S,_,_,_,
+  _,_,_,S,_,_,_,S,_,_,_,S,_,_,_,_,
+  _,_,_,_,_,_,S,S,S,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,S,_,_,_,_,_,_,_,_,
+  _,_,_,_,_,_,_,_,_,_,_,_,_,_,_,_,
+  _,_,S,_,_,_,_,_,_,_,S,_,_,_,_,_,
+  _,S,S,S,_,_,_,_,_,S,S,S,_,_,_,_,
+  _,_,S,_,_,_,S,_,_,_,S,_,_,_,S,_,
+  _,_,_,_,_,S,S,S,_,_,_,_,_,S,S,S,
+};
+
+#undef _
+#undef Y
+#undef O
+#undef C
+#undef W
+#undef G
+#undef B
+#undef P
+#undef L
+#undef S
+
 // Moon phase bitmaps (8x8)
 // Moon colors: 0xFFFFC0 = pale yellow (lit), 0x303030 = dark gray (shadow)
 #define MOON_LIT 0xFFFFC0
@@ -319,27 +465,52 @@ void drawMoonPhase(int startx, int starty, int width, int height, bool enlarged)
 }
 
 // Draw one of the available weather icons in the specified space
+// When enlarged=true, uses native 16x16 icons for better detail
 void drawWeatherIcon(int startx, int starty, int width, int height, uint8_t icon, bool enlarged) {
-  switch (icon) {
-    case 0:
-      drawBitmap(startx, starty, width, height, sun_8x8, enlarged);
-      break;
-    case 1:
-      drawBitmap(startx, starty, width, height, cloud_8x8, enlarged);
-      break;
-    case 2:
-      drawBitmap(startx, starty, width, height, showers_8x8, enlarged);
-      break;
-    case 3:
-      drawBitmap(startx, starty, width, height, rain_8x8, enlarged);
-      break;
-    case 4:
-      drawBitmap(startx, starty, width, height, storm_8x8, enlarged);
-      break;
-    case 5:
-      drawBitmap(startx, starty, width, height, snow_8x8, enlarged);
-      break;
-        
+  if (enlarged) {
+    // Use native 16x16 icons (no scaling needed)
+    switch (icon) {
+      case 0:
+        drawBitmap(startx, starty, 16, 16, sun_16x16, false);
+        break;
+      case 1:
+        drawBitmap(startx, starty, 16, 16, cloud_16x16, false);
+        break;
+      case 2:
+        drawBitmap(startx, starty, 16, 16, showers_16x16, false);
+        break;
+      case 3:
+        drawBitmap(startx, starty, 16, 16, rain_16x16, false);
+        break;
+      case 4:
+        drawBitmap(startx, starty, 16, 16, storm_16x16, false);
+        break;
+      case 5:
+        drawBitmap(startx, starty, 16, 16, snow_16x16, false);
+        break;
+    }
+  } else {
+    // Use 8x8 icons
+    switch (icon) {
+      case 0:
+        drawBitmap(startx, starty, width, height, sun_8x8, false);
+        break;
+      case 1:
+        drawBitmap(startx, starty, width, height, cloud_8x8, false);
+        break;
+      case 2:
+        drawBitmap(startx, starty, width, height, showers_8x8, false);
+        break;
+      case 3:
+        drawBitmap(startx, starty, width, height, rain_8x8, false);
+        break;
+      case 4:
+        drawBitmap(startx, starty, width, height, storm_8x8, false);
+        break;
+      case 5:
+        drawBitmap(startx, starty, width, height, snow_8x8, false);
+        break;
+    }
   }
 }
 
