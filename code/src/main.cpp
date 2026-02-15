@@ -15,9 +15,9 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
-#include <Ticker.h>
 #include <esp_task_wdt.h>
 #include <ArduinoOTA.h>
+#include <ESPmDNS.h>
 
 #include "main.h"
 #include "common.h"
@@ -26,26 +26,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "creds_mqtt.h"
 #include "clock.h"
 #include "weather.h"
-
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <WebSerial.h>
-
-AsyncWebServer server(80);
-
-void recvMsg(uint8_t *data, size_t len){
-  //WebSerial.println("Received Data...");
-  String d = "";
-  for(int i=0; i < len; i++){
-    d += char(data[i]);
-  }
-  //WebSerial.println(d);
-}
-
-Ticker displayTicker;
 unsigned long prevEpoch;
 unsigned long lastNTPUpdate;
 unsigned long lastWeatherUpdate;
+unsigned long lastDisplayUpdate;
 
 //Just a blinking heart to show the main thread is still alive...
 bool blinkOn;
@@ -76,20 +60,25 @@ void setup(){
   Serial.println("WiFi connected.");
   logStatusMessage("WiFi connected!");
 
-  // WebSerial is accessible at "<IP Address>/webserial" in browser
-  WebSerial.begin(&server);
-  WebSerial.onMessage(recvMsg);
-  server.begin();
-  Serial.println("WebSerial started at /webserial");
+  // Disable WiFi power saving for reliable OTA and low latency
+  WiFi.setSleep(false);
+  Serial.println("WiFi power saving disabled");
+
+  // Initialize mDNS (required for ArduinoOTA)
+  if (!MDNS.begin("MorphingClock")) {
+    Serial.println("Error starting mDNS");
+  } else {
+    Serial.println("mDNS started: MorphingClock.local");
+  }
 
   // ArduinoOTA for WiFi firmware uploads
   logStatusMessage("Setting up OTA...");
+  ArduinoOTA.setPort(3232);  // Explicit port
   ArduinoOTA.setHostname("MorphingClock");
   ArduinoOTA.onStart([]() {
     String type = (ArduinoOTA.getCommand() == U_FLASH) ? "sketch" : "filesystem";
     Serial.println("OTA Start: " + type);
     logStatusMessage("OTA Starting...");
-    displayTicker.detach();  // Stop display updates during OTA
   });
   ArduinoOTA.onEnd([]() {
     Serial.println("\nOTA End");
@@ -108,7 +97,7 @@ void setup(){
     logStatusMessage("OTA Error!");
   });
   ArduinoOTA.begin();
-  Serial.println("ArduinoOTA ready");
+  Serial.println("ArduinoOTA ready on port 3232");
 
   logStatusMessage("NTP time...");
   configTime(TIMEZONE_DELTA_SEC, TIMEZONE_DST_SEC, "pool.ntp.org");
@@ -144,30 +133,29 @@ void setup(){
   displayWeatherData();
   
   CJBMessage("Go Team Chrob!!"); //just a silly inside joke
-  displayTicker.attach_ms(30, displayUpdater);
+  lastDisplayUpdate = millis();
 }
 
 uint8_t wheelval = 0;
 void loop() {
   ArduinoOTA.handle();  // Check for OTA updates
 
+  // Update display at regular intervals (replaces Ticker to avoid ISR context issues)
+  if (millis() - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL_MS) {
+    displayUpdater();
+    lastDisplayUpdate = millis();
+  }
+
   if (WiFi.status() != WL_CONNECTED) {
     logStatusMessage("WiFi lost!");
     WiFi.reconnect();
   }
-  //Checking current transmit power
-  //int txPower = WiFi.getTxPower();
-  //Serial.print("Current transmit power: ");
-  //Serial.println(txPower);
 
   if ( !client.connected() ) {
     logStatusMessage("MQTT lost");
     reconnect();
-  } 
+  }
   client.loop();
-
-  //WebSerial.println("Hello!");
-  //delay(1000);
 
   // Periodically refresh NTP time
   if (millis() - lastNTPUpdate > 1000*NTP_REFRESH_INTERVAL_SEC) {
@@ -180,6 +168,7 @@ void loop() {
   if (millis() - lastWeatherUpdate > 1000 * WEATHER_REFRESH_INTERVAL_SEC) {
     logStatusMessage("Weather refresh");
     getOpenMeteoData();
+    yield();  // Allow WiFi/MQTT processing after HTTP request
     displayWeatherData();
     lastWeatherUpdate = millis();
   }
@@ -236,7 +225,8 @@ void loop() {
 
   //Reset the watchdog timer as long as the main task is running
   esp_task_wdt_reset();
-  delay(500);
+
+  delay(100);  // Reduced from 500ms for more responsive MQTT
 }
 
 void displayUpdater() {
