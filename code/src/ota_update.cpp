@@ -1,6 +1,5 @@
 
 #include <ESP32httpUpdate.h>
-//#include <ESP8266WiFi.h>
 
 #include "common.h"
 #include "config.h"
@@ -13,9 +12,9 @@ void perform_update() {
   Serial.print("Starting OTA update from: ");
   Serial.println(OTA_URL);
   logStatusMessage("OTA Requested!");
-  delay(500);
 
-  // ESPhttpUpdate.update("sass.ro", 80, OTA_FILENAME);
+  delay(500);  // Brief delay before starting update
+
   t_httpUpdate_return ret = ESPhttpUpdate.update(OTA_URL);
   
   switch (ret) {

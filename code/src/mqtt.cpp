@@ -1,6 +1,5 @@
 
 #include <Arduino.h>
-//#include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 
 #include "common.h"
@@ -8,30 +7,17 @@
 #include "creds_mqtt.h"
 #include "ota_update.h"
 
-#include <AsyncTCP.h>
-#include <ESPAsyncWebServer.h>
-#include <WebSerial.h>
-
 char mqtt_buffer[MQTT_BUFMAX];
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
-  Serial.print("Message arrived [");
+  Serial.print("MQTT [");
   Serial.print(topic);
   Serial.print("] ");
   for (unsigned int i = 0; i < length; i++) {
     Serial.print((char)payload[i]);
   }
   Serial.println();
-
-  // Also log to WebSerial
-  WebSerial.print("MQTT [");
-  WebSerial.print(topic);
-  WebSerial.print("] ");
-  for (unsigned int i = 0; i < length; i++) {
-    WebSerial.print((char)payload[i]);
-  }
-  WebSerial.println();
 
   if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
     payload[length]=0;

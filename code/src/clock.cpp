@@ -34,7 +34,6 @@ void displayClock() {
   
     int mm = timeinfo.tm_min;
     int ss = timeinfo.tm_sec;
-    delay(500);
 
     if (clockStartingUp) { // If we didn't have a previous time. Just draw it without morphing.
       //digit0.Draw(ss % 10);

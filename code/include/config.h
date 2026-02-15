@@ -44,6 +44,10 @@
 //Delay in ms for clock animation - should be below 30ms for a segment size of 8
 #define CLOCK_ANIMATION_DELAY_MSEC 20
 
+// How often to check for display updates in main loop (ms)
+// Replaces the 30ms Ticker to avoid ISR context conflicts
+#define DISPLAY_UPDATE_INTERVAL_MS 100
+
 // Day of week
 #define DOW_X 4
 #define DOW_Y 37
