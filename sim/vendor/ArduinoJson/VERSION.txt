@@ -1,0 +1,1 @@
+ArduinoJson 6.21.5 (what platformio.ini's ^6.17.3 resolves to; header-only src/)

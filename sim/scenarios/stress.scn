@@ -1,0 +1,12 @@
+# Legal maximum string sizes with deliberately wide and cold data
+time         2026-01-15 21:42:00
+temp         -12
+humidity     100
+sensor_dead  false
+trains       100 101 102 103
+bluetrains   104 105 106 107
+event        ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!?
+event_days   999
+flight       AA123
+flight_dest  MI
+weather      fixtures/open-meteo-winter.json

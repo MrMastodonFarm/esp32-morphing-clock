@@ -1,0 +1,12 @@
+# Phase 1 default scene
+time         2026-08-07 19:42:00
+temp         88.5
+humidity     61
+sensor_dead  false
+trains       4 12 19 27
+bluetrains   2 9 16 24
+event        Beach trip
+event_days   12
+flight       AA123
+flight_dest  MI
+weather      fixtures/open-meteo-summer.json

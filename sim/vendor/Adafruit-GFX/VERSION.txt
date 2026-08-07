@@ -1,0 +1,1 @@
+Adafruit_GFX 1.10.6 (core files + Fonts only; Adafruit_SPITFT deliberately omitted — needs SPI/BusIO, not host-buildable)
