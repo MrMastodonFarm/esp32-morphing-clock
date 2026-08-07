@@ -5,3 +5,12 @@ MQTT_TOPIC="topic/for/update/request"
 MQTT_PAYLOAD="1"
 MQTT_ESP_HOSTNAME="my-esp-name"
 WAIT_TIME_SEC=30
+
+# Home Assistant SSH and web-directory settings for ota_push.sh.
+HA_SSH_HOST="home-assistant-host.or.ip.addr"
+HA_SSH_PORT="22"
+HA_SSH_USER="username"
+HA_WWW_DIR="/config/www/morphclock"
+
+# Optional safety override for ota_push.sh (default: 1250000 bytes).
+# OTA_SIZE_CAP_BYTES=1250000

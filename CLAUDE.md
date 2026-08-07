@@ -28,9 +28,13 @@ There are no tests and no linter — verification is "it compiles" plus watching
 
 ## Deploying without USB
 
-The working path is **HTTP-pull OTA triggered over MQTT**: publish `1` to `MQTT_UPDATE_CMD_TOPIC`, and `ota_update.cpp` pulls the binary from `OTA_URL` via `ESPhttpUpdate`. `code/ota_build.sh` automates the whole thing — builds, serves `firmware.bin` from a throwaway nginx container on :8080, publishes the trigger with `mosquitto_pub`, waits, tears the container down. It sources `creds_ota.sh` (create from `creds_ota.sh.sample`; note `MQTT_ESP_HOSTNAME` must match the filename in `OTA_URL`).
+The intended path is **HTTP-pull OTA triggered over MQTT**: publish `1` to `MQTT_UPDATE_CMD_TOPIC`, and `ota_update.cpp` pulls the binary from `OTA_URL` via `ESPhttpUpdate`. **Verified working end-to-end on 2026-08-07** from the Linux dev box: `pio run`, `scp -P 2222` the `firmware.bin` to Home Assistant's `/config/www/morphclock/` (the deployed `OTA_URL` is `http://192.168.0.51:8123/local/morphclock/firmware.bin`), `mosquitto_pub` the trigger — the clock downloads, flashes, and reboots in ~30s (watch the Mosquitto add-on log for the disconnect/reconnect).
 
-**`pio run -e ota --target upload` (espota) does not work.** The `[env:ota]` block survives in `platformio.ini`, but commit 7c1e23b stripped the `ArduinoOTA` handler out of `main.cpp`, so nothing is listening on 3232. Either re-add `ArduinoOTA.begin()` or use the MQTT path above. (The same commit removed WebSerial for RAM — don't reintroduce either without accounting for the ~50KB and the ISR/CPU-load problems that motivated the removal.)
+Partition-table subtleties learned the hard way: `platformio.ini` declared `huge_app.csv` (single app slot — OTA-impossible) from Feb 2024 (`4b3ad58`) until 2026-08-07, yet the deployed clock's OTA works — **the table on the device is whatever the last USB flash actually wrote**, and evidently that flash didn't use huge_app. `platformio.ini` now declares `min_spiffs.csv` (two 1.92MB slots), but the device's real slots are probably the 1.28MB stock-default table. **Keep `firmware.bin` under ~1.25MB** (currently 0.98MB) until a USB flash adopts min_spiffs — pio's size check trusts the declared table and would happily pass a build too big for the device's actual slot. Expect a few minutes of MQTT reconnect churn after an OTA reboot (observed after the first flash; a subsequent reboot cleared it).
+
+**`code/ota_push.sh` wraps the whole flow in one command**: build → size guard (aborts at ≥1.25MB, see below) → md5 printout → scp to HA → MQTT trigger. `--dry-run` does the build and guard but only prints the deploy commands. It sources `creds_ota.sh` (gitignored; create from `creds_ota.sh.sample`, which documents the `HA_SSH_*`/`HA_WWW_DIR` variables). The older `code/ota_build.sh` automates a docker-nginx variant of the same idea and shares the creds file.
+
+**espota (`ArduinoOTA`) is gone on purpose; MQTT pull is the only wireless path.** Commit `0665892` removed the `ArduinoOTA` handler and mDNS from `main.cpp` during WiFi-stability debugging (standing UDP listener + mDNS overhead), keeping the MQTT-triggered pull as the deliberate update mechanism; the now-dead `[env:ota]` block was deleted from `platformio.ini` on 2026-08-07. (WebSerial/AsyncWebServer were removed separately in `7c1e23b` for ~50KB RAM and the ISR/CPU-load problems — don't reintroduce ArduinoOTA or WebSerial without accounting for those costs.)
 
 ## Architecture
 
@@ -77,5 +81,5 @@ Any sensor message refreshes `lastSensorRead`; after `SENSOR_DEAD_INTERVAL_SEC` 
 ## Hardware
 
 - ESP32 dev board on the custom shield in `pcb/` (v0.3 is current; gerbers included)
-- 128x64 HUB75 matrix (two chained 64x64, or one 128x64), `huge_app.csv` partition table
+- 128x64 HUB75 matrix (two chained 64x64, or one 128x64), `min_spiffs.csv` partition table (OTA-capable; was `huge_app.csv` until 2026-08-07)
 - TSL2591 light sensor and the buzzer are wired for but **disabled** — `light_sensor.cpp`/`buzzer.cpp` are effectively dead code, their call sites in `main.cpp` and their config blocks are commented out. The library dep for the TSL2591 is still in `platformio.ini`.
