@@ -9,8 +9,8 @@
 //#include <Fonts/FreeSerifBold12pt7b.h>
 
 uint8_t forecast5Days[5] = {0,0,0,0,0};
-uint8_t minTemp[5] = {0,0,0,0,0};
-uint8_t maxTemp[5] = {0,0,0,0,0};
+int8_t minTemp[5] = {0,0,0,0,0};
+int8_t maxTemp[5] = {0,0,0,0,0};
 int8_t minTempToday = 0;
 int8_t maxTempToday = 0;
 bool weatherFailed = false;

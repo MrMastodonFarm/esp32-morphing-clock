@@ -80,8 +80,8 @@ extern bool heartBeat;
 extern uint8_t forecast5Days[5];
 extern int8_t minTempToday;
 extern int8_t maxTempToday;
-extern uint8_t minTemp[5];
-extern uint8_t maxTemp[5];
+extern int8_t minTemp[5];
+extern int8_t maxTemp[5];
 
 //OTA update
 extern char updateValue;

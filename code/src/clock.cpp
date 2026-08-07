@@ -23,11 +23,16 @@ Digit digit0(0, CLOCK_X+5*(CLOCK_SEGMENT_WIDTH+CLOCK_SEGMENT_SPACING)+6, PANEL_H
 int prevss = 0;
 int prevmm = 0;
 int prevhh = 0;
+bool hourTensVisible = false;
 
 void displayClock() {
     int hh = timeinfo.tm_hour;
    // Convert to 12h time (but w/o AM/PM)
-    if (hh >= 13)
+    if (hh == 0)
+    {
+      hh = 12;
+    }
+    else if (hh >= 13)
     {
       hh = hh - 12;
     }
@@ -45,11 +50,19 @@ void displayClock() {
       if (hh > 9)
       {
         digit5.Draw(hh / 10);
+        hourTensVisible = true;
+      }
+      else
+      {
+        digit5.Hide();
+        hourTensVisible = false;
       }
       
       //digit1.DrawColon(CLOCK_DIGIT_COLOR);
       digit3.DrawColon(CLOCK_DIGIT_COLOR);
       displayDate();
+      prevhh = hh;
+      prevmm = mm;
       clockStartingUp = false;
     }
     else {
@@ -71,15 +84,21 @@ void displayClock() {
         prevmm = mm;
       }
       
-      if (hh!=prevhh) { 
-         if (hh >= 13) //code to display time in 12h rather than 24h format.  Doesn't suppress the zero when flipping over from 12.
-    {
-      hh = hh - 12;
-    }
+      if (hh!=prevhh) {
         int h0 = hh % 10;
         int h1 = hh / 10;
         if (h0!=digit4.Value()) digit4.Morph(h0);
-        if (h1!=digit5.Value()) digit5.Morph(h1);
+        if (h1 == 0) {
+          if (hourTensVisible) digit5.Hide();
+          hourTensVisible = false;
+        }
+        else if (!hourTensVisible) {
+          digit5.Draw(h1);
+          hourTensVisible = true;
+        }
+        else if (h1!=digit5.Value()) {
+          digit5.Morph(h1);
+        }
         prevhh = hh;
       }
     }

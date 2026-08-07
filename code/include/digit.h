@@ -9,6 +9,7 @@ class Digit {
   public:
     Digit(byte value, uint16_t xo, uint16_t yo, uint16_t color);
     void Draw(byte value);
+    void Hide();
     void Morph(byte newValue);
     byte Value();
     void DrawColon(uint16_t c);

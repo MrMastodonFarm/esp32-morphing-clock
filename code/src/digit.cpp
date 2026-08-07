@@ -96,6 +96,10 @@ void Digit::Draw(byte value) {
   _value = value;
 }
 
+void Digit::Hide() {
+  drawFillRect(0, segHeight * 2 + 2, segWidth + 2, segHeight * 2 + 3, black);
+}
+
 void Digit::Morph2() {
   // TWO
   for (int i = 0; i <= segWidth; i++)
