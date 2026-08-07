@@ -1,5 +1,13 @@
 creds*
 !creds*.sample
+
+# Session notes stay local. They are only useful when they carry operational
+# detail (host IPs, ssh commands, the odd credential), which is exactly what
+# must not land in a public repo - a29a499 published an MQTT password that way.
+# Durable project knowledge belongs in CLAUDE.md; session state belongs in the
+# per-project memory dir, not here.
+handoff.md
+
 #Panel1-JXS-P2.5*
 #.pio
 #.vscode
