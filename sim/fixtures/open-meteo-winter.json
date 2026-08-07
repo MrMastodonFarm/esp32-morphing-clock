@@ -1,21 +1,59 @@
 {
-  "latitude": 38.8048,
-  "longitude": -77.0469,
-  "generationtime_ms": 0.11,
-  "utc_offset_seconds": -18000,
-  "timezone": "America/New_York",
-  "timezone_abbreviation": "GMT-5",
-  "elevation": 11.0,
-  "daily_units": {
-    "time": "iso8601",
-    "weather_code": "wmo code",
-    "temperature_2m_max": "°F",
-    "temperature_2m_min": "°F"
-  },
-  "daily": {
-    "time": ["2026-01-15", "2026-01-16", "2026-01-17", "2026-01-18", "2026-01-19"],
-    "weather_code": [71, 75, 3, 61, 85],
-    "temperature_2m_max": [4.0, 3.0, 8.0, 1.0, 5.0],
-    "temperature_2m_min": [-12.0, -11.0, -9.0, -15.0, -7.0]
-  }
+ "latitude": 38.8048,
+ "longitude": -77.0469,
+ "generationtime_ms": 0.11,
+ "utc_offset_seconds": -18000,
+ "timezone": "America/New_York",
+ "timezone_abbreviation": "GMT-5",
+ "elevation": 11.0,
+ "daily_units": {
+  "time": "iso8601",
+  "weather_code": "wmo code",
+  "temperature_2m_max": "\u00b0F",
+  "temperature_2m_min": "\u00b0F"
+ },
+ "daily": {
+  "time": [
+   "2026-01-15",
+   "2026-01-16",
+   "2026-01-17",
+   "2026-01-18",
+   "2026-01-19"
+  ],
+  "weather_code": [
+   71,
+   75,
+   3,
+   61,
+   85
+  ],
+  "temperature_2m_max": [
+   4.0,
+   3.0,
+   8.0,
+   1.0,
+   5.0
+  ],
+  "temperature_2m_min": [
+   -12.0,
+   -11.0,
+   -9.0,
+   -15.0,
+   -7.0
+  ],
+  "sunrise": [
+   "2026-01-15T07:24",
+   "2026-01-16T07:24",
+   "2026-01-17T07:24",
+   "2026-01-18T07:23",
+   "2026-01-19T07:23"
+  ],
+  "sunset": [
+   "2026-01-15T17:11",
+   "2026-01-16T17:12",
+   "2026-01-17T17:13",
+   "2026-01-18T17:14",
+   "2026-01-19T17:15"
+  ]
+ }
 }

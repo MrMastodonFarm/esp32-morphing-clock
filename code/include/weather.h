@@ -13,6 +13,7 @@ void displayTodaysWeather();
 void displayWeatherForecast();
 void displayWeatherData();
 void displayTodaysTempRange();
+void displaySunTimes();
 void drawHeartBeat();
 void drawBitmap(int startx, int starty, int width, int height, uint32_t *bitmap);
 void drawBitmap(int startx, int starty, int width, int height, uint32_t *bitmap, bool enlarged);

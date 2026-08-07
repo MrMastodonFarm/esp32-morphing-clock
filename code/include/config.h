@@ -137,6 +137,23 @@
 #define TEMPRANGE_HEIGHT 8
 #define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
 
+//Sunrise and sunset, flanking today's weather icon (rise on the left, set on the right).
+//These fill the only two gaps either side of the 16x16 icon, and 13px is exactly one
+//TomThumb "H:MM" - there is no slack. The clock reaches x=52 on digits whose lower-right
+//segment is lit (0/6/8), and displayWeatherForecast() clears from x=98.
+//Both gaps exist only because the seconds digits are commented out in clock.cpp:
+//digit1/digit0 sit at x=59 and x=72, so re-enabling seconds would overwrite these.
+//Amber deliberately matches the sun icon's core; pink is the one warm hue that stays
+//legible against the purple showers icon (violet did not) without reading as sunrise.
+#define SUNRISE_X 55
+#define SUNRISE_Y 29
+#define SUNSET_X 85
+#define SUNSET_Y 29
+#define SUNTIME_WIDTH 13
+#define SUNTIME_HEIGHT 6
+#define SUNRISE_COLOR ((0xFF & 0xF8) << 8) | ((0xA0 & 0xFC) << 3) | (0x00 >> 3)
+#define SUNSET_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0xA0 >> 3)
+
 // How often to refresh weather forecast data
 #define WEATHER_REFRESH_INTERVAL_SEC 3600
 

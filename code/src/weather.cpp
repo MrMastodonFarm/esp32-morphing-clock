@@ -13,6 +13,8 @@ int8_t minTemp[5] = {0,0,0,0,0};
 int8_t maxTemp[5] = {0,0,0,0,0};
 int8_t minTempToday = 0;
 int8_t maxTempToday = 0;
+char sunriseToday[6] = "";
+char sunsetToday[6] = "";
 bool weatherFailed = false;
 int failCount = 0;
 
@@ -554,10 +556,29 @@ void displayWeatherForecast() {
   dma_display->setFont();
 }
 
+void displaySunTimes() {
+  dma_display->fillRect(SUNRISE_X, SUNRISE_Y - 5, SUNTIME_WIDTH, SUNTIME_HEIGHT, 0);
+  dma_display->fillRect(SUNSET_X, SUNSET_Y - 5, SUNTIME_WIDTH, SUNTIME_HEIGHT, 0);
+  dma_display->setTextSize(1);     // size 1 == 8 pixels high
+  dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+  dma_display->setFont(&TomThumb);
+
+  dma_display->setTextColor(SUNRISE_COLOR);
+  dma_display->setCursor(SUNRISE_X, SUNRISE_Y);
+  dma_display->print(sunriseToday);
+
+  dma_display->setTextColor(SUNSET_COLOR);
+  dma_display->setCursor(SUNSET_X, SUNSET_Y);
+  dma_display->print(sunsetToday);
+
+  dma_display->setFont();
+}
+
 void displayWeatherData() {
   displayTodaysWeather();
   displayTodaysTempRange();
   displayWeatherForecast();
+  displaySunTimes();
 }
 
 //Source: https://github.com/witnessmenow/LED-Matrix-Display-Examples/blob/master/LED-Matrix-Mario-Display/LED-Matrix-Mario-Display.ino
@@ -597,6 +618,21 @@ void drawHeartBeat() {
   }
 }
 
+// Open-Meteo returns sunrise/sunset as local-time ISO timestamps ("2026-08-07T06:15")
+// because the request pins timezone=America/New_York, so the clock face just needs the
+// "HH:MM" at offset 11 converted to 12-hour to match the main clock (no AM/PM).
+void formatSunTime(const char *iso, char *out, size_t outLen) {
+  if (iso == NULL || strlen(iso) < 16) {
+    out[0] = '\0';   // nothing to show yet - leave the gap empty rather than crowd the icon
+    return;
+  }
+  int hh = (iso[11] - '0') * 10 + (iso[12] - '0');
+  int mm = (iso[14] - '0') * 10 + (iso[15] - '0');
+  if (hh == 0) hh = 12;
+  else if (hh >= 13) hh -= 12;
+  snprintf(out, outLen, "%d:%02d", hh, mm);
+}
+
 // Return a mapping from WMO weather codes to internal icons:
 // 0 - sun
 // 1 - clouds
@@ -631,7 +667,7 @@ void getOpenMeteoData() {
 
   snprintf(url, 256,
       "http://api.open-meteo.com/v1/forecast?latitude=%s&longitude=%s"
-      "&daily=weather_code,temperature_2m_max,temperature_2m_min"
+      "&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"
       "&temperature_unit=fahrenheit&timezone=America%%2FNew_York&forecast_days=5",
       WEATHER_LATITUDE, WEATHER_LONGITUDE);
 
@@ -681,6 +717,9 @@ void getOpenMeteoData() {
 
   minTempToday = round(temps_min[0].as<double>());
   maxTempToday = round(temps_max[0].as<double>());
+
+  formatSunTime(doc["daily"]["sunrise"][0].as<const char*>(), sunriseToday, sizeof(sunriseToday));
+  formatSunTime(doc["daily"]["sunset"][0].as<const char*>(), sunsetToday, sizeof(sunsetToday));
 
   for (int i = 0; i < 5; i++) {
     forecast5Days[i] = wmoWeatherCodeMapping(weather_codes[i].as<int>());

@@ -82,6 +82,8 @@ extern int8_t minTempToday;
 extern int8_t maxTempToday;
 extern int8_t minTemp[5];
 extern int8_t maxTemp[5];
+extern char sunriseToday[6];
+extern char sunsetToday[6];
 
 //OTA update
 extern char updateValue;
