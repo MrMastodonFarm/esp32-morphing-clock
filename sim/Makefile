@@ -1,16 +1,38 @@
+# Panel simulator. Builds the real firmware rendering code against host shims.
+#
+#   make                     simulate the 128x64 clock (default)
+#   make VARIANT=64x64       simulate the square clock
+#   make VARIANT=64x64 check compare against that variant's goldens
+#
+# Build products and golden images are namespaced per variant, so the two never
+# clobber each other and `make check` compares like with like.
+
+VARIANT ?= 128x64
+VALID_VARIANTS := 128x64 64x64
+ifeq ($(filter $(VARIANT),$(VALID_VARIANTS)),)
+$(error VARIANT must be one of: $(VALID_VARIANTS) (got '$(VARIANT)'))
+endif
+
+# 128x64 -> PANEL_VARIANT_128X64
+VARIANT_FLAG := -DPANEL_VARIANT_$(subst x,X,$(VARIANT))
+
+OUTDIR := out/$(VARIANT)
+GOLDENDIR := golden/$(VARIANT)
+TARGET := sim-$(VARIANT)
+
 CXX := g++
-CPPFLAGS := -DARDUINO=100 -Ishims -I../code/include -Ivendor/Adafruit-GFX -Ivendor/ArduinoJson/src
+CPPFLAGS := -DARDUINO=100 $(VARIANT_FLAG) -Ishims -I../code/include -Ivendor/Adafruit-GFX -Ivendor/ArduinoJson/src
 CXXFLAGS := -std=c++17 -O2 -Wall -Wextra -Wpedantic
 
-TARGET := sim
 FIRMWARE_SOURCES := \
 	../code/src/common.cpp \
 	../code/src/clock.cpp \
 	../code/src/digit.cpp \
 	../code/src/rgb_display.cpp \
-	../code/src/weather.cpp
-FIRMWARE_OBJECTS := $(patsubst ../code/src/%.cpp,out/%.o,$(FIRMWARE_SOURCES))
-OBJECTS := out/sim_main.o out/sim_capture.o out/Adafruit_GFX.o $(FIRMWARE_OBJECTS)
+	../code/src/weather.cpp \
+	../code/src/weather_layout_$(VARIANT).cpp
+FIRMWARE_OBJECTS := $(patsubst ../code/src/%.cpp,$(OUTDIR)/%.o,$(FIRMWARE_SOURCES))
+OBJECTS := $(OUTDIR)/sim_main.o $(OUTDIR)/sim_capture.o $(OUTDIR)/Adafruit_GFX.o $(FIRMWARE_OBJECTS)
 DEPS := $(OBJECTS:.o=.d)
 
 .PHONY: all clean golden check
@@ -20,38 +42,38 @@ all: $(TARGET)
 $(TARGET): $(OBJECTS)
 	$(CXX) $(CXXFLAGS) $^ -o $@
 
-out/sim_main.o: sim_main.cpp | out
+$(OUTDIR)/sim_main.o: sim_main.cpp | $(OUTDIR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-out/sim_capture.o: shims/sim_capture.cpp | out
+$(OUTDIR)/sim_capture.o: shims/sim_capture.cpp | $(OUTDIR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-out/Adafruit_GFX.o: vendor/Adafruit-GFX/Adafruit_GFX.cpp | out
+$(OUTDIR)/Adafruit_GFX.o: vendor/Adafruit-GFX/Adafruit_GFX.cpp | $(OUTDIR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-out/%.o: ../code/src/%.cpp | out
+$(OUTDIR)/%.o: ../code/src/%.cpp | $(OUTDIR)
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -MMD -MP -c $< -o $@
 
-out:
+$(OUTDIR):
 	mkdir -p $@
 
 golden: $(TARGET)
-	mkdir -p golden
-	./$(TARGET) --p0 --output golden/p0.ppm
-	./$(TARGET) --scenario scenarios/default.scn --output golden/default.ppm
-	./$(TARGET) --scenario scenarios/stress.scn --output golden/stress.ppm
+	mkdir -p $(GOLDENDIR)
+	./$(TARGET) --p0 --output $(GOLDENDIR)/p0.ppm
+	./$(TARGET) --scenario scenarios/default.scn --output $(GOLDENDIR)/default.ppm
+	./$(TARGET) --scenario scenarios/stress.scn --output $(GOLDENDIR)/stress.ppm
 
 check: $(TARGET)
-	mkdir -p out/check
-	./$(TARGET) --p0 --output out/check/p0.ppm
-	./$(TARGET) --scenario scenarios/default.scn --output out/check/default.ppm
-	./$(TARGET) --scenario scenarios/stress.scn --output out/check/stress.ppm
-	@cmp -s golden/p0.ppm out/check/p0.ppm || { echo "golden mismatch: p0.ppm"; exit 1; }
-	@cmp -s golden/default.ppm out/check/default.ppm || { echo "golden mismatch: default.ppm"; exit 1; }
-	@cmp -s golden/stress.ppm out/check/stress.ppm || { echo "golden mismatch: stress.ppm"; exit 1; }
-	@echo "golden check passed"
+	mkdir -p $(OUTDIR)/check
+	./$(TARGET) --p0 --output $(OUTDIR)/check/p0.ppm
+	./$(TARGET) --scenario scenarios/default.scn --output $(OUTDIR)/check/default.ppm
+	./$(TARGET) --scenario scenarios/stress.scn --output $(OUTDIR)/check/stress.ppm
+	@cmp -s $(GOLDENDIR)/p0.ppm $(OUTDIR)/check/p0.ppm || { echo "golden mismatch: p0.ppm"; exit 1; }
+	@cmp -s $(GOLDENDIR)/default.ppm $(OUTDIR)/check/default.ppm || { echo "golden mismatch: default.ppm"; exit 1; }
+	@cmp -s $(GOLDENDIR)/stress.ppm $(OUTDIR)/check/stress.ppm || { echo "golden mismatch: stress.ppm"; exit 1; }
+	@echo "golden check passed ($(VARIANT))"
 
 clean:
-	rm -rf out $(TARGET)
+	rm -rf out sim-128x64 sim-64x64
 
 -include $(DEPS)

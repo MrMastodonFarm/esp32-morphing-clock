@@ -105,17 +105,21 @@ void displayClock() {
 }
 
 void displayDate() {
-    dma_display->fillRect(DOW_X, DOW_Y, DATE_WIDTH, DATE_HEIGHT, 0);
+    // DATE_CLEAR_Y differs from DOW_Y on variants using a GFX custom font, whose
+    // cursor Y is the baseline rather than the top of the glyph box.
+    dma_display->fillRect(DOW_X, DATE_CLEAR_Y, DATE_WIDTH, DATE_HEIGHT, 0);
 
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
     dma_display->setTextColor(DATE_COLOR);
 
-    dma_display->setFont();
-   
+    dma_display->setFont(DATE_FONT);
+
     dma_display->setCursor(DOW_X, DOW_Y);
     dma_display->print(&timeinfo, "%a");
 
     dma_display->setCursor(DATE_X, DATE_Y);
     dma_display->print(&timeinfo, "%m/%d");
+
+    dma_display->setFont();
 }

@@ -4,7 +4,7 @@
 
 #include "common.h"
 #include "mqtt.h"
-#include "creds_mqtt.h"
+#include "device_identity.h"
 #include "ota_update.h"
 
 char mqtt_buffer[MQTT_BUFMAX];

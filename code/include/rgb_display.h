@@ -3,54 +3,13 @@
 
 #include "config.h"
 
-
-/* Custom board
-#define R1_PIN 25
-#define G1_PIN 26
-#define B1_PIN 27
-#define R2_PIN 14
-#define G2_PIN 12
-#define B2_PIN 13
-#define A_PIN 23
-#define B_PIN 19
-#define C_PIN 5
-#define D_PIN 17
-#define E_PIN 32 
-#define LAT_PIN 4
-#define OE_PIN 15
-#define CLK_PIN 16
-*/
-
-#define R1_PIN 25
-#define G1_PIN 27
-#define B1_PIN 26
-#define R2_PIN 14
-#define G2_PIN 13
-#define B2_PIN 12
- 
-#define A_PIN 23
-#define B_PIN 19
-#define C_PIN 5
-#define D_PIN 17
-#define E_PIN 18
-#define LAT_PIN 4
-#define OE_PIN 15
-#define CLK_PIN 16
-//E' or GND
-
-/*
-4 5 
-12 13 14 15 16 17 18 19
-23 25 26 27
-
-free:
-2
-21 22 --> I2C
-32 33 
-
-TODO: 
-JTAG: 15 14 13 12
-*/
+// HUB75 pin mapping is per-board; config.h has already validated that exactly one
+// panel variant is selected.
+#if defined(PANEL_VARIANT_128X64)
+  #include "panel_pins_128x64.h"
+#elif defined(PANEL_VARIANT_64X64)
+  #include "panel_pins_64x64.h"
+#endif
 
 #define MATRIX_WIDTH PANEL_WIDTH
 #define MATRIX_HEIGHT PANEL_HEIGHT
@@ -62,7 +21,7 @@ JTAG: 15 14 13 12
 //#include <Fonts/Tiny3x3a2pt7b.h>
 #include <Fonts/TomThumb.h>
 
-uint16_t colorWheel(uint8_t pos); 
+uint16_t colorWheel(uint8_t pos);
 //void drawText(int colorWheelOffset);
 void display_init();
 //void display_drawText();

@@ -5,6 +5,7 @@
 #include <fstream>
 
 #include "Adafruit_GFX.h"
+#include "config.h"   // PANEL_WIDTH / PANEL_HEIGHT for the selected variant
 
 struct HUB75_I2S_CFG {
   struct i2s_pins {
@@ -26,7 +27,7 @@ struct HUB75_I2S_CFG {
 
   enum shift_driver { SHIFTREG, FM6124 };
 
-  HUB75_I2S_CFG(int width = 128, int height = 64, int chain = 1,
+  HUB75_I2S_CFG(int width = PANEL_WIDTH, int height = PANEL_HEIGHT, int chain = 1,
                 i2s_pins pins = {})
       : mx_width(width), mx_height(height), chain_length(chain), gpio(pins) {}
 
@@ -40,8 +41,8 @@ struct HUB75_I2S_CFG {
 
 class MatrixPanel_I2S_DMA : public Adafruit_GFX {
 public:
-  static constexpr int kWidth = 128;
-  static constexpr int kHeight = 64;
+  static constexpr int kWidth = PANEL_WIDTH;
+  static constexpr int kHeight = PANEL_HEIGHT;
 
   explicit MatrixPanel_I2S_DMA(const HUB75_I2S_CFG & = HUB75_I2S_CFG())
       : Adafruit_GFX(kWidth, kHeight), fb{} {}

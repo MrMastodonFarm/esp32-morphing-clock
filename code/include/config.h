@@ -1,5 +1,9 @@
-#ifndef CONFIG_H5
+#ifndef CONFIG_H
 #define CONFIG_H
+
+// Settings shared by every panel variant live here. Anything that depends on the
+// physical panel (geometry, fonts, per-section layout) lives in the variant header
+// included at the bottom of this file, selected by the -D flag set in platformio.ini.
 
 //#define MQTT_USE_SSL 1
 //#define USE_ANDROID_AP 1
@@ -8,6 +12,7 @@
 #define NTP_REFRESH_INTERVAL_SEC 3600
 
 // Timezone difference from GMT, expressed in seconds
+// NOTE: must agree with the timezone= parameter in the Open-Meteo URL in weather.cpp
 #define TIMEZONE_DELTA_SEC -18000
 // DST delta to apply
 #define TIMEZONE_DST_SEC 3600
@@ -18,6 +23,14 @@
 // How long do we consider the sensor data valid before declaring the sensor dead
 #define SENSOR_DEAD_INTERVAL_SEC 600
 
+// How often to check for display updates in main loop (ms)
+// Replaces the 30ms Ticker to avoid ISR context conflicts
+#define DISPLAY_UPDATE_INTERVAL_MS 100
+
+// Watchdog settings
+#define WDT_TIMEOUT 60   // If the WDT is not reset within X seconds, reboot the unit
+        // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!
+
 //Button pin
 #define BUTTON1_PIN 32
 
@@ -25,48 +38,6 @@
 /* #define BUZZER_PIN 2
 #define BUZZER_PWM_CHANNEL 0
 #define BUZZER_PWM_RESOLUTION 8 */
-
-// Screen positioning settings
-// Panel size
-#define PANEL_WIDTH 128
-#define PANEL_HEIGHT 64
-
-// Clock
-#define CLOCK_X 1
-#define CLOCK_Y 15
-#define CLOCK_SEGMENT_HEIGHT 8
-#define CLOCK_SEGMENT_WIDTH 8
-#define CLOCK_SEGMENT_SPACING 5
-#define CLOCK_WIDTH 6*(CLOCK_SEGMENT_WIDTH+CLOCK_SEGMENT_SPACING)+4
-#define CLOCK_HEIGHT 2*CLOCK_SEGMENT_HEIGHT+3
-//color565 == ((red & 0xF8) << 8) | ((green & 0xFC) << 3) | (blue >> 3)
-#define CLOCK_DIGIT_COLOR  ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
-//Delay in ms for clock animation - should be below 30ms for a segment size of 8
-#define CLOCK_ANIMATION_DELAY_MSEC 20
-
-// How often to check for display updates in main loop (ms)
-// Replaces the 30ms Ticker to avoid ISR context conflicts
-#define DISPLAY_UPDATE_INTERVAL_MS 100
-
-// Day of week
-#define DOW_X 4
-#define DOW_Y 37
-#define DOW_COLOR ((0x00 & 0xF8) << 8) | ((0x40 & 0xFC) << 3) | (0xFF >> 3)
-// Date
-#define DATE_X DOW_X + 20
-#define DATE_Y DOW_Y
-#define DATE_COLOR DOW_COLOR
-//Width and height are for both DATE and DOW
-#define DATE_WIDTH 50
-#define DATE_HEIGHT 9
-
-// Weather sensor data
-#define SENSOR_DATA_X 59
-#define SENSOR_DATA_Y 12
-#define SENSOR_DATA_WIDTH 32 //128
-#define SENSOR_DATA_HEIGHT 5
-#define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
-#define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 
 /* Light sensor data
 #define LIGHT_DATA_X 0
@@ -77,82 +48,6 @@
 //Maximum lux value that will be accepted as valid (sometimes the sensor will return erroneous values)
 #define LIGHT_THRESHOLD 9999
 #define LIGHT_READ_INTERVAL_SEC 10 */
-
-// Yellow Line Train data
-#define TRAIN_DATA_X 0
-#define TRAIN_DATA_Y 0
-#define TRAIN_DATA_WIDTH 52
-#define TRAIN_DATA_HEIGHT 5
-#define TRAIN_DATA_COLOR 0xFE80
-#define TRAIN_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
-
-//Blue Line Train Data - position not used so that all train data is a block
-#define BLUE_TRAIN_DATA_X 0 //not used
-#define BLUE_TRAIN_DATA_Y 7 //not used
-#define BLUE_TRAIN_DATA_WIDTH 52
-#define BLUE_TRAIN_DATA_HEIGHT 5
-#define BLUE_TRAIN_DATA_COLOR 0x04FB
-#define TRAIN_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
-
-//Message Line (currently used for calendar next event)
-#define MESSAGE_LINE_1_X 0
-#define MESSAGE_LINE_1_Y 47
-#define MESSAGE_LINE_1_WIDTH 128
-#define MESSAGE_LINE_1_HEIGHT 8
-#define MESSAGE_LINE_1_COLOR 0x04FB
-#define MESSAGE_LINE_1_ERROR_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
-
-//Flight Data
-#define FLIGHT_DATA_X 64
-#define FLIGHT_DATA_Y 0
-#define FLIGHT_DATA_WIDTH 64
-#define FLIGHT_DATA_HEIGHT 8
-#define FLIGHT_DATA_COLOR 0x04FB
-#define MESSAGE_LINE_1_ERROR_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
-
-// Log messages at the bottom
-#define LOG_MESSAGE_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
-
-#define BITMAP_X 0
-#define BITMAP_Y 44
-
-#define HEARTBEAT_X 120
-#define HEARTBEAT_Y 21
-
-// Watchdog settings
-#define WDT_TIMEOUT 60   // If the WDT is not reset within X seconds, reboot the unit
-        // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!
-
-// Weather - today, and 5-day forecast
-#define WEATHER_TODAY_X 68 
-#define WEATHER_TODAY_Y 19 
-
-#define WEATHER_FORECAST_X 108 
-#define WEATHER_FORECAST_Y 12 
-
-//Temperature range for today
-#define TEMPRANGE_X 60 
-#define TEMPRANGE_Y 42 
-#define TEMPRANGE_WIDTH 36
-#define TEMPRANGE_HEIGHT 8
-#define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
-
-//Sunrise and sunset, flanking today's weather icon (rise on the left, set on the right).
-//These fill the only two gaps either side of the 16x16 icon, and 13px is exactly one
-//TomThumb "H:MM" - there is no slack. The clock reaches x=52 on digits whose lower-right
-//segment is lit (0/6/8), and displayWeatherForecast() clears from x=98.
-//Both gaps exist only because the seconds digits are commented out in clock.cpp:
-//digit1/digit0 sit at x=59 and x=72, so re-enabling seconds would overwrite these.
-//Amber deliberately matches the sun icon's core; pink is the one warm hue that stays
-//legible against the purple showers icon (violet did not) without reading as sunrise.
-#define SUNRISE_X 55
-#define SUNRISE_Y 29
-#define SUNSET_X 85
-#define SUNSET_Y 29
-#define SUNTIME_WIDTH 13
-#define SUNTIME_HEIGHT 6
-#define SUNRISE_COLOR ((0xFF & 0xF8) << 8) | ((0xA0 & 0xFC) << 3) | (0x00 >> 3)
-#define SUNSET_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0xA0 >> 3)
 
 // How often to refresh weather forecast data
 #define WEATHER_REFRESH_INTERVAL_SEC 3600
@@ -165,5 +60,22 @@
 // During night hours, the main weather icon shows moon phase instead of weather
 #define NIGHT_START_HOUR 20  // 8 PM - when night begins
 #define NIGHT_END_HOUR 6     // 6 AM - when night ends
+
+// Status/log line along the bottom edge. Both panels are 64 rows tall, so this
+// is the same row on either; only the clear width follows the panel.
+#define LOG_MESSAGE_Y 56
+#define LOG_MESSAGE_HEIGHT 8
+#define LOG_MESSAGE_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
+
+// ---------------------------------------------------------------------------
+// Panel variant selection. platformio.ini defines exactly one of these.
+// ---------------------------------------------------------------------------
+#if defined(PANEL_VARIANT_128X64)
+  #include "config_128x64.h"
+#elif defined(PANEL_VARIANT_64X64)
+  #include "config_64x64.h"
+#else
+  #error "No panel variant selected. Build with -DPANEL_VARIANT_128X64 or -DPANEL_VARIANT_64X64 (see platformio.ini)."
+#endif
 
 #endif

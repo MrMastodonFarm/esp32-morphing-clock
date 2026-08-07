@@ -466,119 +466,54 @@ void drawMoonPhase(int startx, int starty, int width, int height, bool enlarged)
   drawBitmap(startx, starty, width, height, moonBitmap, enlarged);
 }
 
-// Draw one of the available weather icons in the specified space
-// When enlarged=true, uses native 16x16 icons for better detail
+// Draw one of the available weather icons from the 8x8 artwork.
+// enlarged=true pixel-doubles it into a 16x16 space.
 void drawWeatherIcon(int startx, int starty, int width, int height, uint8_t icon, bool enlarged) {
-  if (enlarged) {
-    // Use native 16x16 icons (no scaling needed)
-    switch (icon) {
-      case 0:
-        drawBitmap(startx, starty, 16, 16, sun_16x16, false);
-        break;
-      case 1:
-        drawBitmap(startx, starty, 16, 16, cloud_16x16, false);
-        break;
-      case 2:
-        drawBitmap(startx, starty, 16, 16, showers_16x16, false);
-        break;
-      case 3:
-        drawBitmap(startx, starty, 16, 16, rain_16x16, false);
-        break;
-      case 4:
-        drawBitmap(startx, starty, 16, 16, storm_16x16, false);
-        break;
-      case 5:
-        drawBitmap(startx, starty, 16, 16, snow_16x16, false);
-        break;
-    }
-  } else {
-    // Use 8x8 icons
-    switch (icon) {
-      case 0:
-        drawBitmap(startx, starty, width, height, sun_8x8, false);
-        break;
-      case 1:
-        drawBitmap(startx, starty, width, height, cloud_8x8, false);
-        break;
-      case 2:
-        drawBitmap(startx, starty, width, height, showers_8x8, false);
-        break;
-      case 3:
-        drawBitmap(startx, starty, width, height, rain_8x8, false);
-        break;
-      case 4:
-        drawBitmap(startx, starty, width, height, storm_8x8, false);
-        break;
-      case 5:
-        drawBitmap(startx, starty, width, height, snow_8x8, false);
-        break;
-    }
+  switch (icon) {
+    case 0:
+      drawBitmap(startx, starty, width, height, sun_8x8, enlarged);
+      break;
+    case 1:
+      drawBitmap(startx, starty, width, height, cloud_8x8, enlarged);
+      break;
+    case 2:
+      drawBitmap(startx, starty, width, height, showers_8x8, enlarged);
+      break;
+    case 3:
+      drawBitmap(startx, starty, width, height, rain_8x8, enlarged);
+      break;
+    case 4:
+      drawBitmap(startx, starty, width, height, storm_8x8, enlarged);
+      break;
+    case 5:
+      drawBitmap(startx, starty, width, height, snow_8x8, enlarged);
+      break;
   }
 }
 
-void displayTodaysWeather() {
-  // Clear the area first (16x16 for enlarged icon)
-  dma_display->fillRect(WEATHER_TODAY_X, WEATHER_TODAY_Y, 16, 16, 0);
-
-  // At night, show moon phase instead of weather
-  if (isNightTime()) {
-    drawMoonPhase(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, true);
-  } else {
-    drawWeatherIcon(WEATHER_TODAY_X, WEATHER_TODAY_Y, 8, 8, forecast5Days[0], true);
+// Draw a weather icon from the native 16x16 artwork - more detail than pixel-doubling
+// the 8x8. Only the 128x64 layout has the room for these.
+void drawWeatherIcon16(int startx, int starty, uint8_t icon) {
+  switch (icon) {
+    case 0:
+      drawBitmap(startx, starty, 16, 16, sun_16x16, false);
+      break;
+    case 1:
+      drawBitmap(startx, starty, 16, 16, cloud_16x16, false);
+      break;
+    case 2:
+      drawBitmap(startx, starty, 16, 16, showers_16x16, false);
+      break;
+    case 3:
+      drawBitmap(startx, starty, 16, 16, rain_16x16, false);
+      break;
+    case 4:
+      drawBitmap(startx, starty, 16, 16, storm_16x16, false);
+      break;
+    case 5:
+      drawBitmap(startx, starty, 16, 16, snow_16x16, false);
+      break;
   }
-}
-
-void displayTodaysTempRange() {
-  dma_display->fillRect(TEMPRANGE_X, TEMPRANGE_Y - 5, TEMPRANGE_WIDTH, TEMPRANGE_HEIGHT, 0);
-  dma_display->setTextSize(1);     // size 1 == 8 pixels high
-  dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-  dma_display->setTextColor(TEMPRANGE_COLOR);
-  dma_display->setFont(&TomThumb);
-  dma_display->setCursor(TEMPRANGE_X, TEMPRANGE_Y);   
-  dma_display->printf("%3d/%3d  F", minTempToday, maxTempToday);
-  
-  // Draw the degree symbol manually
-  dma_display->fillRect(TEMPRANGE_X + 24, TEMPRANGE_Y - 5, 2, 2, TEMPRANGE_COLOR);
-  dma_display->setFont();
-}
-
-void displayWeatherForecast() {
-  dma_display->fillRect(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y, 32, 36, 0);
-  dma_display->setFont(&TomThumb);
-  for (int i=1; i<5; i++) {  //skip day 0, since we are already displaying it somewhere else using displayTodaysWeather()
-    //drawWeatherIcon(WEATHER_FORECAST_X + 9*(i-1), WEATHER_FORECAST_Y, 8, 8, forecast5Days[i], false);
-    drawWeatherIcon(WEATHER_FORECAST_X, WEATHER_FORECAST_Y + 9*(i-1), 8, 8, forecast5Days[i], false);
-    dma_display->setCursor(WEATHER_FORECAST_X - 10, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
-    dma_display->printf("%3d", minTemp[i]);
-    dma_display->setCursor(WEATHER_FORECAST_X + 7, WEATHER_FORECAST_Y + 6 + 9*(i-1)); 
-    dma_display->printf("%3d", maxTemp[i]);
-  }
-  dma_display->setFont();
-}
-
-void displaySunTimes() {
-  dma_display->fillRect(SUNRISE_X, SUNRISE_Y - 5, SUNTIME_WIDTH, SUNTIME_HEIGHT, 0);
-  dma_display->fillRect(SUNSET_X, SUNSET_Y - 5, SUNTIME_WIDTH, SUNTIME_HEIGHT, 0);
-  dma_display->setTextSize(1);     // size 1 == 8 pixels high
-  dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-  dma_display->setFont(&TomThumb);
-
-  dma_display->setTextColor(SUNRISE_COLOR);
-  dma_display->setCursor(SUNRISE_X, SUNRISE_Y);
-  dma_display->print(sunriseToday);
-
-  dma_display->setTextColor(SUNSET_COLOR);
-  dma_display->setCursor(SUNSET_X, SUNSET_Y);
-  dma_display->print(sunsetToday);
-
-  dma_display->setFont();
-}
-
-void displayWeatherData() {
-  displayTodaysWeather();
-  displayTodaysTempRange();
-  displayWeatherForecast();
-  displaySunTimes();
 }
 
 //Source: https://github.com/witnessmenow/LED-Matrix-Display-Examples/blob/master/LED-Matrix-Mario-Display/LED-Matrix-Mario-Display.ino

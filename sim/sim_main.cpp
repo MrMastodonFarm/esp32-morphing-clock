@@ -19,8 +19,8 @@
 
 namespace {
 
-constexpr int kPanelWidth = 128;
-constexpr int kPanelHeight = 64;
+constexpr int kPanelWidth = PANEL_WIDTH;
+constexpr int kPanelHeight = PANEL_HEIGHT;
 
 struct Scenario {
   std::tm time = {};
@@ -274,7 +274,7 @@ void drawScene(const Scenario &scenario, std::optional<uint8_t> icon = {}) {
 
   clearStatusMessage();
   drawTestBitmap();
-  CJBMessage("Go Team Chrob!!");
+  CJBMessage(CJB_MESSAGE);
 }
 
 int renderP0(const std::string &path) {

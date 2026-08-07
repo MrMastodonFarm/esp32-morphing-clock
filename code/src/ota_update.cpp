@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "config.h"
-#include "creds_mqtt.h"
+#include "device_identity.h"
 #include "ota_update.h"
 #include "rgb_display.h"
 

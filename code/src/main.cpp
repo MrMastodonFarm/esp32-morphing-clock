@@ -22,7 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "common.h"
 #include "rgb_display.h"
 #include "mqtt.h"
-#include "creds_mqtt.h"
+#include "device_identity.h"
 #include "clock.h"
 #include "weather.h"
 

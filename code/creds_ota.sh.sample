@@ -1,16 +1,26 @@
 MQTT_HOST="host.or.ip.addr"
 MQTT_USER="username"
 MQTT_PASS="password"
-MQTT_TOPIC="topic/for/update/request"
 MQTT_PAYLOAD="1"
 MQTT_ESP_HOSTNAME="my-esp-name"
 WAIT_TIME_SEC=30
 
-# Home Assistant SSH and web-directory settings for ota_push.sh.
+# Home Assistant SSH settings for ota_push.sh (shared by both clocks).
 HA_SSH_HOST="home-assistant-host.or.ip.addr"
 HA_SSH_PORT="22"
 HA_SSH_USER="username"
-HA_WWW_DIR="/config/www/morphclock"
+
+# Per-variant settings. Each clock needs its own www directory and its own MQTT
+# update-request topic, so that pushing one never triggers the other - they would
+# otherwise pull each other's firmware.bin.
+#
+# For the 128x64, unsuffixed HA_WWW_DIR / MQTT_TOPIC are still accepted as a
+# fallback, so pre-split creds files keep working.
+HA_WWW_DIR_128X64="/config/www/morphclock"
+MQTT_TOPIC_128X64="MorphingClock/update/req"
+
+HA_WWW_DIR_64X64="/config/www/morphclock64"
+MQTT_TOPIC_64X64="MorphingClock64/update/req"
 
 # Optional safety override for ota_push.sh (default: 1250000 bytes).
 # OTA_SIZE_CAP_BYTES=1250000

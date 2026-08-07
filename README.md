@@ -1,6 +1,8 @@
 # esp32-morphing-clock
 
-ESP32 HUB75 Matrix Morphing Clock — a clock built on a 128x64 HUB75 RGB LED matrix, driven by an ESP32.
+ESP32 HUB75 Matrix Morphing Clock — a clock built on a HUB75 RGB LED matrix, driven by an ESP32.
+
+**Two clocks, one source tree.** This repo builds both a wide 128x64 version and a square 64x64 version from the same code; only geometry, the HUB75 pin map and the weather-panel layout differ. Pick one with `pio run -e 128x64` or `pio run -e 64x64`.
 
 This is a personalized fork of [bogd/esp32-morphing-clock](https://github.com/bogd/esp32-morphing-clock) by [Bogdan Sass](https://github.com/bogd). The hardware, the shield PCB, the enclosure and the morphing clock itself are his work; this fork adds a handful of display sections (transit arrivals, flight info, a calendar countdown), switches the weather source, and adds a nighttime moon phase. See [Differences from upstream](#differences-from-upstream).
 
@@ -10,7 +12,7 @@ This is a personalized fork of [bogd/esp32-morphing-clock](https://github.com/bo
 
 ## What it displays
 
-Everything lives on one 128x64 panel:
+The wide 128x64 layout:
 
 * **Morphing clock** — 12-hour `HH:MM`, animated 7-segment morphs between digits (seconds are disabled to reduce CPU load)
 * **Day of week and date** (`Mon 04/21`), under the clock
@@ -23,6 +25,8 @@ Everything lives on one 128x64 panel:
 * **Status messages** — startup progress, WiFi/MQTT/OTA state, cleared after 15 seconds
 
 Time is set from NTP at boot and refreshed hourly; weather refreshes hourly.
+
+The square 64x64 shows all of the same sections in a tighter arrangement — most of them in a 3x5 pixel font, the flight destination stacked under the flight number, and the four-day forecast as a horizontal strip of bare icons instead of a vertical column with temperatures. Two things it does not show: **sunrise/sunset** (the wide panel only fits those in the gaps flanking its weather icon) and the **outdoor temperature/humidity** block, which sits off the right edge of the narrower panel.
 
 ## What you need
 
@@ -37,14 +41,18 @@ The MQTT topics the firmware subscribes to are listed in [CLAUDE.md](CLAUDE.md#m
 Requires [PlatformIO](https://platformio.org/). From `code/`:
 
 ```bash
-pio run                    # build
-pio run --target upload    # build and flash over USB
-pio device monitor         # serial monitor, 115200 baud
+pio run                        # build both variants
+pio run -e 128x64              # build just the wide clock
+pio run -e 64x64               # build just the square clock
+pio run -e 128x64 -t upload    # build and flash over USB
+pio device monitor             # serial monitor, 115200 baud
 ```
 
-**A fresh clone will not compile until you create `code/include/creds_mqtt.h`** with your WiFi credentials, MQTT broker details, OTA URL and topic names. It is gitignored and there is no sample file for it — the required macros are listed in [CLAUDE.md](CLAUDE.md#build).
+**A fresh clone will not compile until you create `code/include/creds_mqtt.h`** with your WiFi credentials, MQTT broker details, OTA URL and topic names. It is gitignored and there is no sample file for it — the required macros are listed in [CLAUDE.md](CLAUDE.md#build). If you run both clocks, each needs its own MQTT client id, OTA URL and update topic; the build refuses to produce a 64x64 image without them.
 
-For OTA updates, `code/ota_build.sh` builds the firmware, serves it from a throwaway nginx container, and publishes the MQTT message that tells the clock to go fetch it.
+For OTA updates, `code/ota_push.sh <variant>` builds the firmware, checks its size, copies it to your web server and publishes the MQTT message that tells that clock to go fetch it.
+
+There is also a host-side **simulator** in [`sim/`](sim/) that renders the real firmware drawing code to a PNG, with golden-image tests for both variants — useful for checking a layout change without flashing anything.
 
 ## Differences from upstream
 
@@ -60,7 +68,8 @@ Not implemented, despite being on the original wishlist: automatic brightness fr
 
 ## Repository layout
 
-* [`code/`](code/) — the firmware (PlatformIO)
+* [`code/`](code/) — the firmware (PlatformIO), building both panel variants
+* [`sim/`](sim/) — host-side panel simulator and golden-image tests
 * [`pcb/`](pcb/) — schematics and gerbers for the matrix shield (v0.3 is current)
 * [`case/`](case/) — drawings for the lasercut plexiglass enclosure
 * [`CLAUDE.md`](CLAUDE.md) — architecture notes and gotchas
@@ -73,6 +82,8 @@ Not implemented, despite being on the original wishlist: automatic brightness fr
 * Added train arrival, flight and calendar display sections
 * Removed the 30ms Ticker in favor of cooperative timing in the main loop, fixing visual glitches and dropped MQTT messages
 * Event-based WiFi reconnection
+* Added a host-side panel simulator with golden-image tests
+* Merged the separate 64x64 clock into this tree as a build variant, so both panels share every fix
 
 ### Version 0.2 (upstream)
 * Added MQTT SSL support (thanks to [Andreas](https://github.com/lefty01)). Disabled by default.
