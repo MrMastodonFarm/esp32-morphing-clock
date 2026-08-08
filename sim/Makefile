@@ -73,7 +73,28 @@ check: $(TARGET)
 	@cmp -s $(GOLDENDIR)/stress.ppm $(OUTDIR)/check/stress.ppm || { echo "golden mismatch: stress.ppm"; exit 1; }
 	@echo "golden check passed ($(VARIANT))"
 
+# Regenerate the animation in the top-level README. Renders a run of consecutive
+# minute morphs (including an hour rollover, which is the most interesting one to
+# watch) and composites them into an LED-panel-look GIF.
+# Re-run this after any layout change so the README stops matching reality only
+# in the way the old inherited-from-upstream photo did.
+README_GIF := ../photos/panel-$(VARIANT).gif
+README_MORPHS := 10:58:00 10:59:00 11:00:00
+
+readme-gif: $(TARGET)
+	@rm -rf $(OUTDIR)/readme-frames && mkdir -p $(OUTDIR)/readme-frames
+	@i=0; for t in $(README_MORPHS); do \
+		./$(TARGET) --morph $$t >/dev/null || exit 1; \
+		for f in $$(ls out/morph/*.ppm | sort); do \
+			cp $$f $(OUTDIR)/readme-frames/$$(printf '%04d' $$i).ppm; \
+			i=$$((i+1)); \
+		done; \
+	done; echo "collected $$i frames"
+	python3 make_readme_gif.py $(OUTDIR)/readme-frames $(README_GIF)
+
 clean:
 	rm -rf out sim-128x64 sim-64x64
+
+.PHONY: readme-gif
 
 -include $(DEPS)

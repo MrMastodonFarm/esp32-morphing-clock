@@ -6,9 +6,10 @@ ESP32 HUB75 Matrix Morphing Clock — a clock built on a HUB75 RGB LED matrix, d
 
 This is a personalized fork of [bogd/esp32-morphing-clock](https://github.com/bogd/esp32-morphing-clock) by [Bogdan Sass](https://github.com/bogd). The hardware, the shield PCB, the enclosure and the morphing clock itself are his work; this fork adds a handful of display sections (transit arrivals, flight info, a calendar countdown), switches the weather source, and adds a nighttime moon phase. See [Differences from upstream](#differences-from-upstream).
 
-![Photo](photos/animation1-opt.gif)
+![The 128x64 clock](photos/panel-128x64.gif)
 
-*(photo is from the original project — the panel layout has changed since)*
+*Rendered from the simulator in [`sim/`](sim/), so it shows the layout this code actually
+produces rather than a photo that drifts out of date. Regenerate with `cd sim && make readme-gif`.*
 
 ## What it displays
 
@@ -25,6 +26,8 @@ The wide 128x64 layout:
 * **Status messages** — startup progress, WiFi/MQTT/OTA state, cleared after 15 seconds
 
 Time is set from NTP at boot and refreshed hourly; weather refreshes hourly.
+
+![The 64x64 clock](photos/panel-64x64.gif)
 
 The square 64x64 shows all of the same sections in a tighter arrangement — most of them in a 3x5 pixel font, the flight destination stacked under the flight number, and the four-day forecast as a horizontal strip of bare icons instead of a vertical column with temperatures. Two things it does not show: **sunrise/sunset** (the wide panel only fits those in the gaps flanking its weather icon) and the **outdoor temperature/humidity** block, which sits off the right edge of the narrower panel.
 
@@ -52,7 +55,7 @@ pio device monitor             # serial monitor, 115200 baud
 
 For OTA updates, `code/ota_push.sh <variant>` builds the firmware, checks its size, copies it to your web server and publishes the MQTT message that tells that clock to go fetch it.
 
-There is also a host-side **simulator** in [`sim/`](sim/) that renders the real firmware drawing code to a PNG, with golden-image tests for both variants — useful for checking a layout change without flashing anything.
+There is also a host-side **simulator** in [`sim/`](sim/) that renders the real firmware drawing code to a PNG, with golden-image tests for both variants — useful for checking a layout change without flashing anything. It also produces the animations above (`make readme-gif`).
 
 ## Differences from upstream
 
