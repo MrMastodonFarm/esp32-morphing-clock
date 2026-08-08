@@ -41,6 +41,7 @@ bool newTrainData = false;
 bool newCalendarData = false;
 bool newFlightNumber  = false;
 bool newFlightDestination  = false;
+volatile bool otaRequested = false;
 bool sensorDead = true;
 
 //Heartbeat marker

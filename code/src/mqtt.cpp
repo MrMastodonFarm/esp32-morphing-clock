@@ -125,7 +125,12 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     // Start update if a 1 was received as first character
     updateValue = (char)payload[0]; // now-superfluous extra step
     if (updateValue == '1') {
-      perform_update();
+      // Only raise a flag - loop() runs the update. Doing it here would block
+      // inside PubSubClient's callback for the whole download, which starves the
+      // MQTT keepalive and, worse, never reaches the esp_task_wdt_reset() at the
+      // bottom of loop(): the watchdog then panics mid-flash and the device
+      // reboots onto the OLD image. That is what happened on 2026-08-07.
+      otaRequested = true;
     }
   }
 }

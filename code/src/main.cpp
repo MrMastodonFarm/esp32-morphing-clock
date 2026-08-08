@@ -25,6 +25,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "device_identity.h"
 #include "clock.h"
 #include "weather.h"
+#include "ota_update.h"
 
 unsigned long prevEpoch;
 unsigned long lastNTPUpdate;
@@ -63,7 +64,7 @@ void setup(){
 
   displayTest(300);
 // Set ESP32 host name
-  String hostname = "MorphingClock";
+  String hostname = MQTT_CLIENT_ID;  // per-variant, so the two clocks do not collide on the network
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, INADDR_NONE);
   WiFi.setHostname(hostname.c_str()); //define hostname
 
@@ -126,7 +127,7 @@ void setup(){
   drawTestBitmap();
   displayWeatherData();
   
-  CJBMessage("Go Team Chrob!!"); //just a silly inside joke
+  CJBMessage(CJB_MESSAGE); //just a silly inside joke
   lastDisplayUpdate = millis();
 }
 
@@ -145,6 +146,14 @@ void loop() {
     reconnect();
   }
   client.loop();
+
+  // Run a requested OTA here, out of the MQTT callback, so the long blocking
+  // download is not holding up PubSubClient - and so the watchdog handling in
+  // perform_update() is the only thing standing between us and a 60s timeout.
+  if (otaRequested) {
+    otaRequested = false;
+    perform_update();
+  }
 
   // Periodically refresh NTP time
   if (millis() - lastNTPUpdate > 1000*NTP_REFRESH_INTERVAL_SEC) {
@@ -167,7 +176,7 @@ void loop() {
     if (millis() > messageDisplayMillis + LOG_MESSAGE_PERSISTENCE_MSEC) {
       clearStatusMessage();
       drawTestBitmap();
-      CJBMessage("Go Team Chrob!!");
+      CJBMessage(CJB_MESSAGE);
     }
   }
 

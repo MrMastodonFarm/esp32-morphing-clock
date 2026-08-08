@@ -52,6 +52,7 @@ extern bool newTrainData;
 extern bool newCalendarData;
 extern bool newFlightNumber;
 extern bool newFlightDestination;
+extern volatile bool otaRequested;
 extern bool sensorDead;
 
 //The actual sensor data

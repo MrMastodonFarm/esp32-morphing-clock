@@ -31,6 +31,12 @@
 #define WDT_TIMEOUT 60   // If the WDT is not reset within X seconds, reboot the unit
         // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!
 
+// Widened watchdog used only for the duration of an OTA. ESPhttpUpdate.update()
+// blocks for the whole download-and-flash without ever returning to loop(), so the
+// normal 60s WDT races it - and when the WDT wins it panics mid-flash, rebooting
+// onto the old image with no visible error. See perform_update() in ota_update.cpp.
+#define OTA_WDT_TIMEOUT 300
+
 //Button pin
 #define BUTTON1_PIN 32
 
