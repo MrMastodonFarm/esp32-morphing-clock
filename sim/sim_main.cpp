@@ -247,7 +247,10 @@ void drawScene(const Scenario &scenario, std::optional<uint8_t> icon = {}) {
   setCString(sensorFlightDestination, scenario.flightDestination);
   sensorDead = scenario.sensorDead;
 
-  newSensorData = true;
+  // On the device these two are mutually exclusive: newSensorData is only ever set by
+  // an arriving MQTT message, which is also what clears sensorDead. Forcing both on
+  // would draw the dead state and then immediately paint the live reading over it.
+  newSensorData = !scenario.sensorDead;
   newTrainData = true;
   newCalendarData = true;
   newFlightNumber = true;

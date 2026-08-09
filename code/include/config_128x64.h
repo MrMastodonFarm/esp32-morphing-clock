@@ -42,10 +42,18 @@
 #define DATE_FONT NULL
 #define DATE_CLEAR_Y DOW_Y
 
-// Weather sensor data
+// Weather sensor data.
+// X=59 is not arbitrary: it centres the readout's ink (x=61..90) on 75.5, which is
+// exactly the centre of the 16x16 today icon below it (x=68..83) and of the temp-range
+// row below that. Move it and the middle column visibly stops lining up - so if this row
+// ever needs more space, take it from the width, not the origin.
+// The width is the clear rect and must cover the *widest* content, not the typical
+// content. TomThumb is variable-advance, so a 3-digit humidity with no leading space on
+// the temperature ("-12  F 100%") reaches x=93 where " 88  F  61%" stops at 90. 36 covers
+// x=59..94 and still leaves 3px before displayWeatherForecast()'s clear rect at x=98.
 #define SENSOR_DATA_X 59
 #define SENSOR_DATA_Y 12
-#define SENSOR_DATA_WIDTH 32 //128
+#define SENSOR_DATA_WIDTH 36
 #define SENSOR_DATA_HEIGHT 5
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)

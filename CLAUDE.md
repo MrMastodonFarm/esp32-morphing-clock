@@ -147,6 +147,10 @@ Actual topic strings live in `creds_mqtt.h`; the deployed convention is a `Morph
 
 Any sensor message refreshes `lastSensorRead`; after `SENSOR_DEAD_INTERVAL_SEC` with nothing, `sensorDead` flips and the temp/humidity block renders in the error color. Payloads are copied into fixed-size buffers with no length check (`sensorNextEvent[65]`, `sensorFlightNumber[6]`, `sensorFlightDestination[3]`) — an over-long publish will smash memory.
 
+**Everything in that table is published by Node-RED**, not by Home Assistant itself — the `a0d7b954_nodered` add-on on HA (192.168.0.51), flow tab **`MorphingClock`**, flows at `/addon_configs/a0d7b954_nodered/flows.json`. Grepping `/config/*.yaml` for the topics finds nothing and is a dead end; that is where an hour went on 2026-08-09. Outdoor temp/humidity are `poll-state` nodes reading `sensor.tempest_temperature` / `sensor.tempest_humidity` once a minute. **So "No sensor data" almost always means Node-RED is down or was restarted, not that the clock or the broker is broken** — check `ha addons logs a0d7b954_nodered` first.
+
+**Diagnosing which feed is actually dead:** trains, calendar and flight publish **retained**, temp/humidity do **not**. So a short `mosquitto_sub` shows the retained topics instantly and temp/humidity not at all — which looks exactly like the failure and is not. Subscribe for **90+ seconds** before concluding anything about temp/humidity. Conversely a retained train value proves nothing about freshness; the clock will happily display a value published days ago.
+
 ## Hardware
 
 - ESP32 dev board on the custom shield in `pcb/` (v0.3 is current; gerbers included)

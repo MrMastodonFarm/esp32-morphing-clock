@@ -102,34 +102,40 @@ void clearStatusMessage() {
    CJBMessage(CJB_MESSAGE); //refresh silly inside joke after the status message goes away
 }
 
+// Outdoor temp/humidity, or a dashed placeholder once the feed goes stale.
+//
+// Both states paint the same slot in the same font and clear the same rect, so a
+// recovering sensor fully overwrites the error state. That matters: the dead branch has
+// no flag guard (it must keep asserting itself for as long as the feed is stale), and it
+// used to draw "No sensor data!" in the built-in 8x8 font - 90px of text in a 32px clear
+// rect, which sprayed across the weather icon and the forecast column and could only be
+// partially cleaned up by whatever repainted next.
 void displaySensorData() {
-  if (sensorDead) {
-    dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
-    dma_display->setTextSize(1);     // size 1 == 8 pixels high
-    dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-    dma_display->setTextColor(SENSOR_ERROR_DATA_COLOR);
-    
-    dma_display->setFont();
-    
-    dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y);   
-    dma_display->print("No sensor data!");
+  if (!sensorDead && !newSensorData) {
+    return;
   }
 
-  if (newSensorData) {
-    dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
-    dma_display->setTextSize(1);     // size 1 == 8 pixels high
-    dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-    dma_display->setTextColor(SENSOR_DATA_COLOR);
-    dma_display->setFont(&TomThumb);
-    dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y+5);   
+  const uint16_t color = sensorDead ? SENSOR_ERROR_DATA_COLOR : SENSOR_DATA_COLOR;
+
+  dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
+  dma_display->setTextSize(1);     // size 1 == 8 pixels high
+  dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
+  dma_display->setTextColor(color);
+  dma_display->setFont(&TomThumb);
+  dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y+5);   //Y offset because custom fonts draw from bottom instead of top
+
+  if (sensorDead) {
+    // Same character positions as the live format below, so the slot keeps its shape.
+    dma_display->print(" --  F  --%");
+  } else {
     dma_display->printf("%3.0f  F %3d%%", sensorTemp, sensorHumi);
-    
-    // Draw the degree symbol manually
-    dma_display->fillRect(SENSOR_DATA_X + 11, SENSOR_DATA_Y, 2, 2, SENSOR_DATA_COLOR);
-   
-    dma_display->setFont();
-    newSensorData = false;
   }
+
+  // Draw the degree symbol manually
+  dma_display->fillRect(SENSOR_DATA_X + 11, SENSOR_DATA_Y, 2, 2, color);
+
+  dma_display->setFont();
+  newSensorData = false;
 }
 void displayTrainData() {
   if (newTrainData) {

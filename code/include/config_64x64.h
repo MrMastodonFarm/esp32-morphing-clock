@@ -46,10 +46,11 @@
 // Weather sensor data.
 // NOTE: X=65 puts this block off the right edge of a 64px-wide panel, so outdoor
 // temp/humidity is effectively not shown on this variant. Inherited as-is from the
-// 64x64 repo - move it on-panel if you want it back.
+// 64x64 repo - move it on-panel if you want it back. The width still has to cover the
+// widest drawn string (see config_128x64.h) so it works if you do.
 #define SENSOR_DATA_X 65
 #define SENSOR_DATA_Y 43
-#define SENSOR_DATA_WIDTH 33
+#define SENSOR_DATA_WIDTH 36
 #define SENSOR_DATA_HEIGHT 6
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)

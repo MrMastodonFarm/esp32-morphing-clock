@@ -57,21 +57,25 @@ $(OUTDIR)/%.o: ../code/src/%.cpp | $(OUTDIR)
 $(OUTDIR):
 	mkdir -p $@
 
+# Every .scn in scenarios/ is rendered and compared, so adding a scenario is one file.
+SCENARIOS := $(basename $(notdir $(wildcard scenarios/*.scn)))
+
 golden: $(TARGET)
 	mkdir -p $(GOLDENDIR)
 	./$(TARGET) --p0 --output $(GOLDENDIR)/p0.ppm
-	./$(TARGET) --scenario scenarios/default.scn --output $(GOLDENDIR)/default.ppm
-	./$(TARGET) --scenario scenarios/stress.scn --output $(GOLDENDIR)/stress.ppm
+	@for s in $(SCENARIOS); do \
+		./$(TARGET) --scenario scenarios/$$s.scn --output $(GOLDENDIR)/$$s.ppm || exit 1; \
+	done
 
 check: $(TARGET)
 	mkdir -p $(OUTDIR)/check
 	./$(TARGET) --p0 --output $(OUTDIR)/check/p0.ppm
-	./$(TARGET) --scenario scenarios/default.scn --output $(OUTDIR)/check/default.ppm
-	./$(TARGET) --scenario scenarios/stress.scn --output $(OUTDIR)/check/stress.ppm
 	@cmp -s $(GOLDENDIR)/p0.ppm $(OUTDIR)/check/p0.ppm || { echo "golden mismatch: p0.ppm"; exit 1; }
-	@cmp -s $(GOLDENDIR)/default.ppm $(OUTDIR)/check/default.ppm || { echo "golden mismatch: default.ppm"; exit 1; }
-	@cmp -s $(GOLDENDIR)/stress.ppm $(OUTDIR)/check/stress.ppm || { echo "golden mismatch: stress.ppm"; exit 1; }
-	@echo "golden check passed ($(VARIANT))"
+	@for s in $(SCENARIOS); do \
+		./$(TARGET) --scenario scenarios/$$s.scn --output $(OUTDIR)/check/$$s.ppm >/dev/null || exit 1; \
+		cmp -s $(GOLDENDIR)/$$s.ppm $(OUTDIR)/check/$$s.ppm || { echo "golden mismatch: $$s.ppm"; exit 1; }; \
+	done
+	@echo "golden check passed ($(VARIANT)): p0 $(SCENARIOS)"
 
 # Regenerate the animation in the top-level README. Renders a run of consecutive
 # minute morphs (including an hour rollover, which is the most interesting one to
