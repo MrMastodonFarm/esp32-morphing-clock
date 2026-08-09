@@ -8,6 +8,9 @@
 // font macros mostly select the default font (setFont(NULL)). TomThumb is used only
 // where the section is genuinely tight.
 
+// Human-readable variant name, printed in the boot banner on serial.
+#define PANEL_VARIANT_NAME "128x64"
+
 // Panel size
 #define PANEL_WIDTH 128
 #define PANEL_HEIGHT 64

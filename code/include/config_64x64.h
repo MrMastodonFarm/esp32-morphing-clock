@@ -8,6 +8,9 @@
 // is a GFX custom font, so its cursor Y is the *baseline* rather than the top-left
 // corner - that is where the recurring "+5" offsets and "-5" clear rects come from.
 
+// Human-readable variant name, printed in the boot banner on serial.
+#define PANEL_VARIANT_NAME "64x64"
+
 // Panel size
 #define PANEL_WIDTH 64
 #define PANEL_HEIGHT 64

@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <esp_system.h>
 #include <esp_task_wdt.h>
 #include <esp_wifi.h>
 
@@ -54,11 +55,45 @@ void WiFiEvent(WiFiEvent_t event) {
   }
 }
 
+// Why this exists: twice on 2026-08-07/08 the question "which firmware is this clock
+// actually running?" cost real time, once needing binaries byte-compared to answer it.
+// The build stamp settles it in one serial line.
+//
+// The reset reason matters just as much. A failed OTA is invisible otherwise: the panel
+// shows "OTA Requested!", the clock reboots on cue, and comes back on the OLD image with
+// no error, because a watchdog panic never gets far enough to print one. ESP_RST_TASK_WDT
+// vs ESP_RST_SW tells those apart immediately.
+//
+// NOTE: the ROM's own "rst:0x..." boot log is NOT available on this board. OE_PIN is
+// GPIO15 (MTDO), an ESP32 strapping pin, and HUB75 output-enable is active-low - so the
+// panel holds it low at every reset, which silences the ROM log on U0TXD. esp_reset_reason()
+// is read from our own code after Serial.begin(), so strapping cannot suppress it.
+static const char *resetReasonName(esp_reset_reason_t r) {
+  switch (r) {
+    case ESP_RST_POWERON:  return "POWERON (cold boot)";
+    case ESP_RST_SW:       return "SW (ESP.restart - normal after a successful OTA)";
+    case ESP_RST_PANIC:    return "PANIC (exception/abort)";
+    case ESP_RST_INT_WDT:  return "INT_WDT (interrupt watchdog)";
+    case ESP_RST_TASK_WDT: return "TASK_WDT (task watchdog - the OTA failure mode)";
+    case ESP_RST_WDT:      return "WDT (other watchdog)";
+    case ESP_RST_BROWNOUT: return "BROWNOUT (supply sagged)";
+    case ESP_RST_DEEPSLEEP:return "DEEPSLEEP";
+    case ESP_RST_EXT:      return "EXT (external reset pin)";
+    case ESP_RST_SDIO:     return "SDIO";
+    default:               return "UNKNOWN";
+  }
+}
+
 void setup(){
   display_init();
 
   Serial.begin(115200);
   delay(10);
+
+  Serial.println();
+  Serial.printf("=== MorphingClock %s | built %s %s ===\n",
+                PANEL_VARIANT_NAME, __DATE__, __TIME__);
+  Serial.printf("Reset reason: %s\n", resetReasonName(esp_reset_reason()));
 
   pinMode(BUTTON1_PIN, INPUT_PULLUP);
 
