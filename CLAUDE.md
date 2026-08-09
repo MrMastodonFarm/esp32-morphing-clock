@@ -70,9 +70,28 @@ The intended path is **HTTP-pull OTA triggered over MQTT**: publish `1` to `MQTT
 
 **This was silently broken until 2026-08-07 evening — read this before trusting an OTA.** `perform_update()` was called from inside `mqtt_callback()`, so the whole blocking download-and-flash ran without `loop()` ever reaching its `esp_task_wdt_reset()`. The 60s watchdog (`panic=true`) therefore raced the update, and when it won it rebooted the device *mid-flash*, before the new slot was validated — so the bootloader fell back to the old image. The failure is indistinguishable from success at a glance: the panel shows `OTA Requested!`, the clock reboots, and comes back running the OLD firmware with no error, because it never got far enough to print one. Earlier same-day runs that "worked" took ~30s, i.e. half the watchdog budget; the margin quietly vanished as the binary grew.
 
-The fix is two-part: `mqtt_callback()` now only sets `otaRequested` and `loop()` runs the update, and `perform_update()` widens the watchdog to `OTA_WDT_TIMEOUT` (300s) for the duration and restores `WDT_TIMEOUT` after. Widening rather than `esp_task_wdt_delete(NULL)` so a genuinely hung download is still caught. A stale TODO at the bottom of `main.cpp` ("sometimes the system hangs during OTA request") was this bug, noticed years earlier and never traced.
+The fix is three-part, and the third part was a *second*, independent bug hiding behind the first:
 
-**A device still running pre-fix firmware cannot receive this fix over OTA** — the broken path is the one doing the delivering. It needs one USB flash (`pio run -e <variant> -t upload`), which also finally adopts the `min_spiffs` table.
+1. `mqtt_callback()` now only sets `otaRequested`; `loop()` runs the update. A stale TODO at the bottom of `main.cpp` ("sometimes the system hangs during OTA request") was this bug, noticed years earlier and never traced.
+2. `perform_update()` widens the watchdog to `OTA_WDT_TIMEOUT` (300s) for the duration and restores `WDT_TIMEOUT` after — widening rather than `esp_task_wdt_delete(NULL)`, so a genuinely hung download is still caught.
+3. **`perform_update()` no longer uses `ESPhttpUpdate` at all.** With the watchdog fixed, every OTA then failed fast with `HTTP_UPDATE_FAILED Error (8): Wrong Magic Byte` while the staged binary verified byte-for-byte at the server every time. Those can't both describe the same bytes. `ESPhttpUpdate` (and the core's `HTTPUpdate`, same code) does a blind `delay(100)` after the GET and hands the stream to `Update.writeStream()`, whose first act is `_verifyHeader(data.peek())`. `Stream::peek()` returns `-1` when nothing is buffered; that lands in a `uint8_t` parameter as `0xFF`, fails `!= 0xE9`, and aborts as `UPDATE_ERROR_MAGIC_BYTE`. **A timing bug wearing a corruption error's clothing.** `perform_update()` now drives `HTTPClient`/`Update` directly and waits for `stream->available()` before flashing. The abandoned `suculent/ESP32httpUpdate` dependency is gone.
+
+Verified 2026-08-08: five consecutive OTAs, 17–26s trigger-to-boot, every one `reset: SW`.
+
+**A device still running pre-fix firmware cannot receive this fix over OTA** — the broken path is the one doing the delivering. It needs one USB flash (`pio run -e <variant> -t upload`). The 128x64 got that on 2026-08-08; **the 64x64 has not, so OTA does not work on it yet.**
+
+**Verifying an OTA landed.** Every boot publishes a retained line to a per-device status topic:
+
+```
+mosquitto_sub -h <broker> -u <user> -P <pass> -t 'MorphingClock/state'
+online | 128x64 | built Aug  8 2026 22:35:47 | reset: SW (ESP.restart - normal after a successful OTA)
+```
+
+That exists because a failed OTA and a successful one look identical from outside, and answering "which build is on there" twice required byte-comparing binaries. `reset:` distinguishes a clean OTA reboot (`SW`) from the watchdog failure mode (`TASK_WDT`). **Subscribe live rather than reading the retained value** if you are testing repeatedly — re-flashing an identical binary republishes identical text, so a retained-value comparison scores a success as a failure (it did exactly that here).
+
+The device's partition table was confirmed empirically over USB on 2026-08-08 — `min_spiffs` with two real 1920K app slots — so the ~1.25MB `OTA_SIZE_CAP_BYTES` guard in `ota_push.sh` is conservative by roughly 35%. It is not currently binding (firmware is ~1.01MB) and can be raised via `creds_ota.sh` without a code change.
+
+**`ota_push.sh` stages with a bare `scp` and does not verify afterwards.** On 2026-08-08 a timed-out `scp` into an I/O-saturated Home Assistant left a *truncated* firmware at the live path — cut to exactly the previous build's size, so a size check would have passed it. Only an md5 caught it. Prefer transferring to `firmware.bin.new`, verifying the md5 remotely, then swapping.
 
 Partition-table subtleties learned the hard way: `platformio.ini` declared `huge_app.csv` (single app slot — OTA-impossible) from Feb 2024 (`4b3ad58`) until 2026-08-07, yet the deployed clock's OTA works — **the table on the device is whatever the last USB flash actually wrote**, and evidently that flash didn't use huge_app. `platformio.ini` now declares `min_spiffs.csv` (two 1.92MB slots), but the device's real slots are probably the 1.28MB stock-default table. **Keep `firmware.bin` under ~1.25MB** (currently 0.98MB) until a USB flash adopts min_spiffs — pio's size check trusts the declared table and would happily pass a build too big for the device's actual slot. Expect a few minutes of MQTT reconnect churn after an OTA reboot (observed after the first flash; a subsequent reboot cleared it).
 
