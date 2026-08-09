@@ -54,14 +54,25 @@
 #define SENSOR_DATA_HEIGHT 6
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
-// Feels-like shown in place of humidity - see FEELS_LIKE_DELTA_F. Two bare numbers
-// in one colour would be ambiguous, so this one is coloured and ends in a degree
-// dot rather than a %.
-// The colour also carries the direction, which matters once the value can come
-// from a source that does wind chill as well as heat index: amber reads as hotter
-// than the air, pale blue as colder. Amber deliberately matches SUNRISE_COLOR.
-#define SENSOR_FEELSLIKE_HOT_COLOR ((0xFF & 0xF8) << 8) | ((0xA0 & 0xFC) << 3) | (0x00 >> 3)
-#define SENSOR_FEELSLIKE_COLD_COLOR ((0x60 & 0xF8) << 8) | ((0xC8 & 0xFC) << 3) | (0xFF >> 3)
+// Feels-like shown in place of humidity - see FEELS_LIKE_DELTA_F. Two bare numbers in
+// one colour would be ambiguous, so this one is coloured and ends in a degree dot
+// rather than a %.
+//
+// Two axes. Hue is direction: red hotter than the air, blue colder. Intensity is
+// provenance: full strength when WeatherFlow pushed the value, muted when it is our own
+// heat index because the feed went quiet. A silent fallback is how the flight display
+// sat stale for five days looking perfectly plausible.
+//
+// NOTE the hot hue is the same red as SENSOR_ERROR_DATA_COLOR. They cannot appear at
+// once - the dead-sensor state replaces the whole line with dashes - but if that ever
+// stops being true, change one of them.
+#define SENSOR_FEELSLIKE_HOT_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
+#define SENSOR_FEELSLIKE_COLD_COLOR ((0x30 & 0xF8) << 8) | ((0x70 & 0xFC) << 3) | (0xFF >> 3)
+#define SENSOR_FEELSLIKE_HOT_ESTIMATED_COLOR ((0x90 & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
+// Near-unreachable in this climate: a heat index only lands 5F BELOW air temperature in
+// very dry heat (110F/10% -> 104). Defined so the four states are total, not because it
+// is expected to show up in Alexandria.
+#define SENSOR_FEELSLIKE_COLD_ESTIMATED_COLOR ((0x18 & 0xF8) << 8) | ((0x38 & 0xFC) << 3) | (0x80 >> 3)
 
 // Yellow Line Train data
 #define TRAIN_DATA_X 0

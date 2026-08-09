@@ -163,8 +163,14 @@ void displaySensorData() {
     dma_display->printf("%3.0f  F ", sensorTemp);
 
     if (showFeelsLike) {
+      // Hue is direction, intensity is provenance: a muted colour means nobody pushed us
+      // a feels-like and this is our own heat index. Without that the fallback is
+      // invisible - the panel would keep showing a plausible number with the feed dead,
+      // which is precisely how the flight display went stale for five days unnoticed.
       const uint16_t flColor =
-          (delta >= 0) ? SENSOR_FEELSLIKE_HOT_COLOR : SENSOR_FEELSLIKE_COLD_COLOR;
+          (delta >= 0)
+              ? (haveFeed ? SENSOR_FEELSLIKE_HOT_COLOR : SENSOR_FEELSLIKE_HOT_ESTIMATED_COLOR)
+              : (haveFeed ? SENSOR_FEELSLIKE_COLD_COLOR : SENSOR_FEELSLIKE_COLD_ESTIMATED_COLOR);
       dma_display->setTextColor(flColor);
       dma_display->printf("%3.0f", feelsLike);
       // Degree dot instead of a %, so it reads as a temperature. Positioned from the

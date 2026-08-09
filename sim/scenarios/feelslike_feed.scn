@@ -1,0 +1,16 @@
+# Hot, with a feels-like pushed in over MQTT. Covers the full-strength amber, which
+# default.scn cannot: default deliberately carries no feels_like line, so it exercises
+# the locally computed fallback and its muted colour instead. Between the two you can
+# see at a glance whether the provenance colours are actually distinguishable.
+time         2026-08-07 19:42:00
+temp         88.5
+humidity     61
+feels_like   97
+sensor_dead  false
+trains       4 12 19 27
+bluetrains   2 9 16 24
+event        Beach trip
+event_days   12
+flight       AA123
+flight_dest  MI
+weather      fixtures/open-meteo-summer.json
