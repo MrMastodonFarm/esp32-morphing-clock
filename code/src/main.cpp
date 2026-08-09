@@ -15,6 +15,7 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <esp_ota_ops.h>
 #include <esp_system.h>
 #include <esp_task_wdt.h>
 #include <esp_wifi.h>
@@ -27,6 +28,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "clock.h"
 #include "weather.h"
 #include "ota_update.h"
+#include "panel_diag.h"
 
 unsigned long prevEpoch;
 unsigned long lastNTPUpdate;
@@ -163,8 +165,29 @@ void setup(){
   // identical from outside. Retained so a subscriber that connects later still sees it.
   {
     char boot[192];
-    snprintf(boot, sizeof(boot), "online | %s | built %s %s | reset: %s",
-             PANEL_VARIANT_NAME, __DATE__, __TIME__, bootReason);
+#ifdef PANEL_DIAG
+    // Say so loudly: this build shows a test pattern instead of the clock, and the
+    // only way back is another OTA.
+    const char *buildKind = " | PANEL DIAG BUILD";
+#else
+    const char *buildKind = "";
+#endif
+
+    // __DATE__/__TIME__ are baked in wherever they appear - here, in main.cpp - so they
+    // only move when *this* file is recompiled. Edit any other translation unit and the
+    // stamp is unchanged, which makes it useless as "which firmware is on there?"
+    // exactly when you most need it (it reported an identical stamp across two different
+    // diagnostic builds on 2026-08-09). The ELF SHA-256 comes from the app descriptor
+    // the bootloader already stores and changes with any recompile at all.
+    char elfsha[9] = "unknown";
+    const esp_app_desc_t *desc = esp_ota_get_app_description();
+    if (desc != NULL) {
+      snprintf(elfsha, sizeof(elfsha), "%02x%02x%02x%02x", desc->app_elf_sha256[0],
+               desc->app_elf_sha256[1], desc->app_elf_sha256[2], desc->app_elf_sha256[3]);
+    }
+
+    snprintf(boot, sizeof(boot), "online | %s%s | built %s %s | elf %s | reset: %s",
+             PANEL_VARIANT_NAME, buildKind, __DATE__, __TIME__, elfsha, bootReason);
     if (client.publish(MQTT_STATUS_TOPIC, boot, true)) {
       Serial.printf("Announced on %s: %s\n", MQTT_STATUS_TOPIC, boot);
     } else {
@@ -189,6 +212,27 @@ void setup(){
 
 uint8_t wheelval = 0;
 void loop() {
+#ifdef PANEL_DIAG
+  // Diagnostic build: the panel shows only the test pattern, so nothing else draws.
+  // MQTT, the OTA path and the watchdog feed are all still here on purpose - this
+  // build has to be replaceable over the air, or recovering the clock means USB.
+  panelDiagUpdate();
+
+  if (WiFi.status() == WL_CONNECTED && !client.connected()) {
+    reconnect();
+  }
+  client.loop();
+
+  if (otaRequested) {
+    otaRequested = false;
+    perform_update();
+  }
+
+  esp_task_wdt_reset();
+  delay(100);
+  return;
+#endif
+
   // Update display at regular intervals (replaces Ticker to avoid ISR context issues)
   if (millis() - lastDisplayUpdate >= DISPLAY_UPDATE_INTERVAL_MS) {
     displayUpdater();

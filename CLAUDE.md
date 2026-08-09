@@ -17,12 +17,16 @@ Repo layout: `code/` (PlatformIO firmware — the only thing you build), `sim/` 
 All commands run from `code/`:
 
 ```bash
-pio run                          # Build BOTH variants (there is no default_envs)
+pio run                          # Build BOTH variants (default_envs pins it to the two real ones)
 pio run -e 128x64                # Build just the wide clock
 pio run -e 64x64                 # Build just the square clock
 pio run -e 128x64 -t upload      # Build + flash over USB
 pio device monitor               # Serial monitor (115200 baud)
 ```
+
+**Panel diagnostics: `pio run -e 128x64-diag` (or `64x64-diag`).** Same identity, OTA URL and topics as the matching real env — it is the same physical clock — but `loop()` draws only the test pattern in `panel_diag.cpp` and nothing else. It keeps MQTT, the OTA path and the watchdog feed alive on purpose, so it can be replaced over the air; without that, recovering the clock means USB and taking it off the wall. Not built by `pio run` (`default_envs` excludes it), and the boot announcement says `PANEL DIAG BUILD`.
+
+Use it when a photo of the running clock cannot settle something — it drives states the normal display never produces. Two hard-won lessons are baked into the phase list: **a full-screen fill cannot reveal ghosting or scan-pair leakage**, because both are about one region copying another and a uniform field makes any copy invisible; and solid red/green/blue photograph as dark banding on a phone, because the shutter beats the panel's multiplex, so those phases are for looking at by eye only. The phase that actually earns its keep is sparse bright bars against black. It also exposes `MorphingClock/diag/latchblank` for sweeping latch blanking live rather than one OTA per value.
 
 There is no linter, and the only automated test is the simulator's golden-image check (`cd sim && make check` / `make VARIANT=64x64 check`). Beyond that, verification is "it compiles" plus watching the serial log / the panel. **Run `pio run` with no `-e` before pushing a shared change** — that is what catches a config macro added to one variant and not the other.
 
@@ -84,8 +88,10 @@ Verified 2026-08-08: five consecutive OTAs, 17–26s trigger-to-boot, every one 
 
 ```
 mosquitto_sub -h <broker> -u <user> -P <pass> -t 'MorphingClock/state'
-online | 128x64 | built Aug  8 2026 22:35:47 | reset: SW (ESP.restart - normal after a successful OTA)
+online | 128x64 | built Aug  9 2026 11:47:21 | elf 1aa27d7a | reset: SW (ESP.restart - normal after a successful OTA)
 ```
+
+**Compare the `elf` field, not the build stamp.** `__DATE__`/`__TIME__` are baked in where they appear — `main.cpp` — so they only move when *that* file is recompiled. Edit any other translation unit and the stamp is unchanged, which is exactly when you most need it: on 2026-08-09 two genuinely different diagnostic builds announced an identical timestamp. `elf` is the first four bytes of the app descriptor's ELF SHA-256 and changes with any recompile at all.
 
 That exists because a failed OTA and a successful one look identical from outside, and answering "which build is on there" twice required byte-comparing binaries. `reset:` distinguishes a clean OTA reboot (`SW`) from the watchdog failure mode (`TASK_WDT`). **Subscribe live rather than reading the retained value** if you are testing repeatedly — re-flashing an identical binary republishes identical text, so a retained-value comparison scores a success as a failure (it did exactly that here).
 
@@ -158,6 +164,12 @@ Any sensor message refreshes `lastSensorRead`; after `SENSOR_DEAD_INTERVAL_SEC` 
 - **Square clock:** one 64x64 HUB75 matrix (a DC2512-style module, which needs B and G swapped relative to the wide clock's panel — hence the separate pin header)
 - `min_spiffs.csv` partition table (OTA-capable; was `huge_app.csv` until 2026-08-07). The 64x64 repo still declared `huge_app.csv` — a single app slot, so OTA was impossible there — until the merge.
 - TSL2591 light sensor and the buzzer are wired for but **disabled** — `light_sensor.cpp`/`buzzer.cpp` are effectively dead code, their call sites in `main.cpp` and their config blocks are commented out. The library dep for the TSL2591 is still in `platformio.ini`.
+
+**`PANEL_BRIGHTNESS` is 12, and that is a measured value — do not raise it casually.** The library default is 32; at 32 the wide panel ghosts, bleeding a faint green copy of a lit row onto the row *directly above* it. It showed as a dashed green line under the calendar row and tracked the dithering in the forecast icons. Mechanism: row 54 is driven by scan address 22, address 21 (row 53) is clocked immediately before it, and the data lands before the address settles — so it is marginal panel timing, not a code bug and not a dead LED. Measured 2026-08-09 against a static test pattern: 32 obvious, 16 present, 12 barely visible, 8 essentially clean but too dim for a lit room. `latch_blanking`, the knob nominally meant for exactly this, is nearly useless here — 1 → 2 → 4 changed *which* pixels ghosted without removing them. It sits at 4 only because that is what the working configuration was measured with; the two were never varied independently at the final brightness.
+
+Retunable live, no reflash: publish 1..`PANEL_WIDTH` to `MorphingClock/panel/brightness`, **retained** so it survives a reboot (unretained, a reboot falls back to the compiled value). Out-of-range and non-numeric payloads are rejected rather than applied — `atoi()` returns 0 for junk, and 0 would leave a wall clock dark with no indication why.
+
+Separately and genuinely unfixable: a handful of scattered individual LEDs have a weak blue channel. They read yellow on a white field and green wherever the layout puts cyan on them. Confirmed against full-screen fills; nothing in software can relight a dead channel, and they are too scattered to dodge by moving a section.
 
 ## Simulator
 

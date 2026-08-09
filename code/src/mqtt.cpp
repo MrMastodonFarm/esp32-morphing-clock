@@ -7,6 +7,22 @@
 #include "device_identity.h"
 #include "ota_update.h"
 
+#include "rgb_display.h"
+
+// Panel brightness is a real setting on a wall clock - room light changes, and it is the
+// control that suppresses the green ghost (see PANEL_BRIGHTNESS in config.h), so being
+// able to retune it without a reflash is worth the topic. Publish it RETAINED and it is
+// reapplied on every reconnect; otherwise a reboot falls back to PANEL_BRIGHTNESS.
+// Defined here off MQTT_TOPIC_PREFIX rather than in creds_mqtt.h so a fresh clone does
+// not need another macro to compile.
+#define MQTT_PANEL_BRIGHTNESS_TOPIC MQTT_TOPIC_PREFIX "/panel/brightness"
+
+#ifdef PANEL_DIAG
+// Latch blanking stays diagnostic-only - it is driver internals with no user-facing
+// meaning, and sweeping it needs the static test pattern to judge against anyway.
+#define MQTT_DIAG_LATCHBLANK_TOPIC MQTT_TOPIC_PREFIX "/diag/latchblank"
+#endif
+
 char mqtt_buffer[MQTT_BUFMAX];
 
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
@@ -120,6 +136,31 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     lastSensorRead = millis();
     newFlightDestination = true;
   } 
+  if ( strcmp(topic, MQTT_PANEL_BRIGHTNESS_TOPIC) == 0 ) {
+    payload[length] = 0;
+    int b = atoi((char *)payload);
+    // Units are the library's row-width scale, not 0-255. Reject junk rather than
+    // blanking the panel: atoi() returns 0 for any non-numeric payload, and 0 would
+    // leave a wall clock dark with no way to see that anything is wrong.
+    if (b >= 1 && b <= PANEL_WIDTH) {
+      dma_display->setPanelBrightness(b);
+      Serial.printf("Panel brightness -> %d\n", b);
+    } else {
+      Serial.printf("Ignoring out-of-range brightness '%s' (want 1..%d)\n",
+                    (char *)payload, PANEL_WIDTH);
+    }
+  }
+
+#ifdef PANEL_DIAG
+  if ( strcmp(topic, MQTT_DIAG_LATCHBLANK_TOPIC) == 0 ) {
+    payload[length] = 0;
+    // setLatBlanking() clamps to MAX_LAT_BLANKING (4) and re-applies brightness itself,
+    // and treats 0 as "back to the default", so no validation is needed here.
+    uint8_t applied = dma_display->setLatBlanking(atoi((char *)payload));
+    Serial.printf("[diag] latch_blanking -> %u\n", applied);
+  }
+#endif
+
     if ( strcmp(topic, MQTT_UPDATE_CMD_TOPIC)==0 ) {
     Serial.println("Starting update process...");
     // Start update if a 1 was received as first character
@@ -184,6 +225,11 @@ void reconnect() {
       client.subscribe(MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC);
       client.subscribe(MQTT_FLIGHT_NUMBER_TOPIC);
       client.subscribe(MQTT_FLIGHT_DESTINATION_TOPIC);
+      client.subscribe(MQTT_PANEL_BRIGHTNESS_TOPIC);
+#ifdef PANEL_DIAG
+      client.subscribe(MQTT_DIAG_LATCHBLANK_TOPIC);
+      Serial.println("[diag] latch blanking topic subscribed");
+#endif
     } else {
       logStatusMessage("Can't Stop Team Chrob!!"); //silly inside joke
       Serial.print( "[FAILED] [ rc = " );

@@ -37,6 +37,10 @@ struct HUB75_I2S_CFG {
   i2s_pins gpio;
   bool clkphase = true;
   shift_driver driver = SHIFTREG;
+  // Panel timing knobs. Accepted and ignored: they change how the real hardware drives
+  // the LEDs, not what gets drawn, so they cannot affect a rendered frame. Present only
+  // so display_init() compiles against this shim.
+  uint8_t latch_blanking = 1;
 };
 
 class MatrixPanel_I2S_DMA : public Adafruit_GFX {

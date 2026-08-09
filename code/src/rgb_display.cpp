@@ -31,11 +31,24 @@ void display_init() {
   // mxconfig.gpio.e = E_PIN;
   mxconfig.clkphase = false;
   mxconfig.driver = HUB75_I2S_CFG::FM6124;
+
+  // Ghost suppression, library default 1, maximum 4. This is the knob nominally meant
+  // for the green row-above ghost described at PANEL_BRIGHTNESS, and on this panel it
+  // is nearly useless: going 1 -> 2 -> 4 changed which pixels ghosted without making
+  // them go away. PANEL_BRIGHTNESS is what actually fixed it.
+  // 4 is kept because it is what the working configuration was measured with, not
+  // because it earns its place - the two were never varied independently at the final
+  // brightness. Re-testing it means the diagnostic build, which can sweep it live over
+  // MQTT; do that rather than changing it on the assumption it does nothing.
+  mxconfig.latch_blanking = 4;
   dma_display = new MatrixPanel_I2S_DMA(mxconfig);
 
 	// MUST DO THIS FIRST!
 	dma_display->begin(); // Use default values for matrix dimentions and pins supplied within ESP32-HUB75-MatrixPanel-I2S-DMA.h
-  //dma_display->setPanelBrightness(110);
+
+  // Must follow begin(): setPanelBrightness() rewrites OE bits in the DMA buffer, which
+  // does not exist until begin() has allocated it.
+  dma_display->setPanelBrightness(PANEL_BRIGHTNESS);
 }
 
 void logStatusMessage(const char *message) {
