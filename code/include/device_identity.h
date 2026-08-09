@@ -43,4 +43,12 @@
 
 #endif
 
+// Status/boot-announcement topic, keyed off MQTT_CLIENT_ID rather than
+// MQTT_TOPIC_PREFIX. The prefix is deliberately shared - both clocks consume the same
+// sensor data - but "which build am I running" is per-device, and on the shared prefix
+// the two clocks would silently overwrite each other's announcement. Defined here, after
+// the per-variant MQTT_CLIENT_ID is settled, so it resolves correctly for either build.
+#undef MQTT_STATUS_TOPIC
+#define MQTT_STATUS_TOPIC MQTT_CLIENT_ID "/state"
+
 #endif

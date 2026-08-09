@@ -84,16 +84,19 @@ static const char *resetReasonName(esp_reset_reason_t r) {
   }
 }
 
+static const char *bootReason = "UNSET";
+
 void setup(){
   display_init();
 
   Serial.begin(115200);
   delay(10);
 
+  bootReason = resetReasonName(esp_reset_reason());
   Serial.println();
   Serial.printf("=== MorphingClock %s | built %s %s ===\n",
                 PANEL_VARIANT_NAME, __DATE__, __TIME__);
-  Serial.printf("Reset reason: %s\n", resetReasonName(esp_reset_reason()));
+  Serial.printf("Reset reason: %s\n", bootReason);
 
   pinMode(BUTTON1_PIN, INPUT_PULLUP);
 
@@ -152,6 +155,24 @@ void setup(){
   reconnect();
   lastStatusSend = 0;
   logStatusMessage("MQTT done!");
+
+  // Announce what booted, retained, on a per-device topic. This makes "did that OTA
+  // actually land?" answerable with one mosquitto_sub from anywhere - no serial cable,
+  // no USB. That question cost hours on 2026-08-07/08, twice needing binaries
+  // byte-compared to answer it, because a failed OTA and a successful one looked
+  // identical from outside. Retained so a subscriber that connects later still sees it.
+  {
+    char boot[192];
+    snprintf(boot, sizeof(boot), "online | %s | built %s %s | reset: %s",
+             PANEL_VARIANT_NAME, __DATE__, __TIME__, bootReason);
+    if (client.publish(MQTT_STATUS_TOPIC, boot, true)) {
+      Serial.printf("Announced on %s: %s\n", MQTT_STATUS_TOPIC, boot);
+    } else {
+      // Non-fatal: PubSubClient's default buffer is 256 bytes, so an over-long
+      // announcement silently fails rather than truncating. Worth knowing about.
+      Serial.println("WARNING: boot announcement publish failed");
+    }
+  }
 
   logStatusMessage("Setting up watchdog...");
   esp_task_wdt_init(WDT_TIMEOUT, true);
