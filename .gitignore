@@ -6,7 +6,7 @@ creds*
 # must not land in a public repo - a29a499 published an MQTT password that way.
 # Durable project knowledge belongs in CLAUDE.md; session state belongs in the
 # per-project memory dir, not here.
-handoff.md
+handoff*.md
 
 #Panel1-JXS-P2.5*
 #.pio
