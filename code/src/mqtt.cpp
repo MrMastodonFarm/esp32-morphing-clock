@@ -25,6 +25,55 @@
 
 char mqtt_buffer[MQTT_BUFMAX];
 
+// Parse a numeric payload, rejecting anything that is not wholly a number.
+//
+// Replaces bare atof()/atoi(), which return 0 for unparseable input and so cannot tell
+// "the outdoor temperature is zero" from "Home Assistant said unavailable". Works on a
+// local copy rather than NUL-terminating in place, so it never writes into
+// PubSubClient's receive buffer.
+static bool parseNumberPayload(const byte *payload, unsigned int length, float *out) {
+  char text[24];
+  if (length == 0 || length >= sizeof(text)) {
+    return false;
+  }
+  memcpy(text, payload, length);
+  text[length] = '\0';
+
+  char *end = NULL;
+  const double value = strtod(text, &end);
+  if (end == text) {
+    return false;  // nothing numeric at all - "unavailable", "unknown", ""
+  }
+  while (*end == ' ' || *end == '\t' || *end == '\r' || *end == '\n') {
+    ++end;
+  }
+  if (*end != '\0') {
+    return false;  // trailing junk, e.g. "72F"
+  }
+  *out = (float)value;
+  return true;
+}
+
+// Bounded copy for the string topics.
+//
+// The previous strncpy(dest, payload, length) + dest[length] = 0 wrote past the end of
+// the destination for any payload longer than it. That was not theoretical:
+// sensorFlightDestination is 3 bytes and "unavailable" is 11, so one routine Home
+// Assistant reload put a NUL nine bytes past the end of the array, into whatever global
+// followed it.
+//
+// Rejects rather than truncates. A truncated "unavailable" would display as "un" and
+// look like a real flight code; refusing leaves the last good value on screen.
+static bool copyPayload(char *dest, size_t destSize, const byte *payload,
+                        unsigned int length) {
+  if (length >= destSize) {
+    return false;
+  }
+  memcpy(dest, payload, length);
+  dest[length] = '\0';
+  return true;
+}
+
 void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   // handle message arrived
   Serial.print("MQTT [");
@@ -35,19 +84,38 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   }
   Serial.println();
 
+  // Every handler below refuses a payload it cannot parse, and - just as important -
+  // does not stamp lastSensorRead when it refuses.
+  //
+  // Home Assistant publishes the literal strings "unavailable" and "unknown" whenever an
+  // entity drops out, and an integration reload is enough to cause it (observed on
+  // temperature and humidity on 2026-08-09). atoi()/atof() turn those into 0, so the
+  // panel used to display a fabricated 0F while the freshness clock said the sensor was
+  // perfectly healthy - and "0 0 0 0" on the train row reads as four trains arriving now.
+  //
+  // Refusing keeps the last good reading on screen. It also means a sustained outage now
+  // ages into the dashed stale state on its own after SENSOR_DEAD_INTERVAL_SEC, because
+  // nothing is refreshing lastSensorRead. That falls out of the change; it needed no
+  // extra logic.
+  float number = 0;
+
   if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
-    payload[length]=0;
-    sensorTemp = atof((char *)payload);
-    lastSensorRead = millis();
-    sensorDead = false;
-    newSensorData = true;
+    if (parseNumberPayload(payload, length, &number)) {
+      sensorTemp = number;
+      lastSensorRead = millis();
+      sensorDead = false;
+      newSensorData = true;
+    }
   }
   if ( strcmp(topic, MQTT_HUMIDITY_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorHumi = atoi((char *)payload);
-    lastSensorRead = millis();
-    sensorDead = false;
-    newSensorData = true;
+    // Parsed as a float and truncated rather than read with atoi(): humidity arrives as
+    // "50.16", and a strict integer parse would reject every reading.
+    if (parseNumberPayload(payload, length, &number)) {
+      sensorHumi = (int)number;
+      lastSensorRead = millis();
+      sensorDead = false;
+      newSensorData = true;
+    }
   }
 
   // WeatherFlow's feels-like, which unlike a locally computed heat index also covers the
@@ -56,120 +124,83 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
   // clock that declared its outdoor sensor alive on the strength of this arriving - while
   // temperature and humidity had actually stopped - would be lying.
   if ( strcmp(topic, MQTT_FEELS_LIKE_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorFeelsLike = atof((char *)payload);
-    feelsLikeValid = true;
-    lastFeelsLikeRead = millis();
-    newSensorData = true;
+    if (parseNumberPayload(payload, length, &number)) {
+      sensorFeelsLike = number;
+      feelsLikeValid = true;
+      lastFeelsLikeRead = millis();
+      newSensorData = true;
+    }
   }
 
-    if ( strcmp(topic, MQTT_TRAIN1_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorTrain1 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
+  // Yellow line, then blue line. Same shape for all eight.
+  {
+    int *const trainTargets[] = {
+        &sensorTrain1, &sensorTrain2, &sensorTrain3, &sensorTrain4,
+        &sensorBlueTrain1, &sensorBlueTrain2, &sensorBlueTrain3, &sensorBlueTrain4};
+    const char *const trainTopics[] = {
+        MQTT_TRAIN1_SENSOR_TOPIC, MQTT_TRAIN2_SENSOR_TOPIC,
+        MQTT_TRAIN3_SENSOR_TOPIC, MQTT_TRAIN4_SENSOR_TOPIC,
+        MQTT_BLUE_TRAIN1_SENSOR_TOPIC, MQTT_BLUE_TRAIN2_SENSOR_TOPIC,
+        MQTT_BLUE_TRAIN3_SENSOR_TOPIC, MQTT_BLUE_TRAIN4_SENSOR_TOPIC};
+    for (unsigned int i = 0; i < sizeof(trainTopics) / sizeof(trainTopics[0]); ++i) {
+      if (strcmp(topic, trainTopics[i]) == 0 &&
+          parseNumberPayload(payload, length, &number)) {
+        *trainTargets[i] = (int)number;
+        lastSensorRead = millis();
+        newTrainData = true;
+      }
+    }
   }
 
-    if ( strcmp(topic, MQTT_TRAIN2_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorTrain2 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }
-    if ( strcmp(topic, MQTT_TRAIN3_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorTrain3 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }   if ( strcmp(topic, MQTT_TRAIN4_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorTrain4 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }
-    if ( strcmp(topic, MQTT_BLUE_TRAIN1_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorBlueTrain1 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }
-    if ( strcmp(topic, MQTT_BLUE_TRAIN2_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorBlueTrain2 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }
-    if ( strcmp(topic, MQTT_BLUE_TRAIN3_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorBlueTrain3 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }   
-    if ( strcmp(topic, MQTT_BLUE_TRAIN4_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorBlueTrain4 = atoi((char *)payload);
-    lastSensorRead = millis();
-    newTrainData = true;
-  }
-    if ( strcmp(topic, MQTT_TEMPERATURE_SENSOR_TOPIC) == 0) {
-    payload[length]=0;
-    sensorTemp = atof((char *)payload);
-    lastSensorRead = millis();
-    sensorDead = false;
-    newSensorData = true;
-  }
-  if ( strcmp(topic, MQTT_HUMIDITY_SENSOR_TOPIC) == 0) {
-    payload[length] = 0;
-    sensorHumi = atoi((char *)payload);
-    lastSensorRead = millis();
-    sensorDead = false;
-    newSensorData = true;
-  }
   if ( strcmp(topic, MQTT_NEXT_EVENT_SENSOR_TOPIC ) == 0) {
-    strncpy(sensorNextEvent, (char*)payload, length);
-    sensorNextEvent[length] = '\0';
-    lastSensorRead = millis();
-    newCalendarData = true;
-  } 
+    if (copyPayload(sensorNextEvent, sizeof(sensorNextEvent), payload, length)) {
+      lastSensorRead = millis();
+      newCalendarData = true;
+    }
+  }
   if ( strcmp(topic, MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC ) == 0) {
-    payload[length] = 0;
-    sensorDaysTillNextEvent = atoi((char *)payload);
-    lastSensorRead = millis();
-    newCalendarData = true; 
-  } 
+    if (parseNumberPayload(payload, length, &number)) {
+      sensorDaysTillNextEvent = (int)number;
+      lastSensorRead = millis();
+      newCalendarData = true;
+    }
+  }
   if ( strcmp(topic, MQTT_FLIGHT_NUMBER_TOPIC ) == 0) {
-    strncpy(sensorFlightNumber, (char*)payload, length);
-    sensorFlightNumber[length] = '\0';
-    lastSensorRead = millis();
-    newFlightNumber = true;
-  } 
+    if (copyPayload(sensorFlightNumber, sizeof(sensorFlightNumber), payload, length)) {
+      lastSensorRead = millis();
+      newFlightNumber = true;
+    }
+  }
   if ( strcmp(topic, MQTT_FLIGHT_DESTINATION_TOPIC ) == 0) {
-    strncpy(sensorFlightDestination, (char*)payload, length);
-    sensorFlightDestination[length] = '\0';
-    lastSensorRead = millis();
-    newFlightDestination = true;
-  } 
+    if (copyPayload(sensorFlightDestination, sizeof(sensorFlightDestination), payload,
+                    length)) {
+      lastSensorRead = millis();
+      newFlightDestination = true;
+    }
+  }
   if ( strcmp(topic, MQTT_PANEL_BRIGHTNESS_TOPIC) == 0 ) {
-    payload[length] = 0;
-    int b = atoi((char *)payload);
-    // Units are the library's row-width scale, not 0-255. Reject junk rather than
-    // blanking the panel: atoi() returns 0 for any non-numeric payload, and 0 would
-    // leave a wall clock dark with no way to see that anything is wrong.
+    float requested = 0;
+    const int b = parseNumberPayload(payload, length, &requested) ? (int)requested : -1;
+    // Units are the library's row-width scale, not 0-255. Unparseable input lands as
+    // -1 and is rejected below rather than reaching the panel: a 0 would leave a wall
+    // clock dark with no indication why.
     if (b >= 1 && b <= PANEL_WIDTH) {
       dma_display->setPanelBrightness(b);
       Serial.printf("Panel brightness -> %d\n", b);
     } else {
-      Serial.printf("Ignoring out-of-range brightness '%s' (want 1..%d)\n",
-                    (char *)payload, PANEL_WIDTH);
+      Serial.printf("Ignoring unparseable/out-of-range brightness (want 1..%d)\n",
+                    PANEL_WIDTH);
     }
   }
 
 #ifdef PANEL_DIAG
   if ( strcmp(topic, MQTT_DIAG_LATCHBLANK_TOPIC) == 0 ) {
-    payload[length] = 0;
     // setLatBlanking() clamps to MAX_LAT_BLANKING (4) and re-applies brightness itself,
-    // and treats 0 as "back to the default", so no validation is needed here.
-    uint8_t applied = dma_display->setLatBlanking(atoi((char *)payload));
+    // and treats 0 as "back to the default", so an unparseable payload is harmless here
+    // - it still goes through the parser to avoid writing into PubSubClient's buffer.
+    float pulses = 0;
+    parseNumberPayload(payload, length, &pulses);
+    uint8_t applied = dma_display->setLatBlanking((uint8_t)pulses);
     Serial.printf("[diag] latch_blanking -> %u\n", applied);
   }
 #endif
