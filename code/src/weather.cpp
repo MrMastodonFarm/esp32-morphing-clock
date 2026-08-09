@@ -408,6 +408,38 @@ void drawTestBitmap() {
 // Uses a known new moon reference date (Jan 6, 2000) and the synodic month (~29.53 days)
 // Returns: 0=new, 1=waxing crescent, 2=first quarter, 3=waxing gibbous,
 //          4=full, 5=waning gibbous, 6=last quarter, 7=waning crescent
+// NWS heat index. This is the Rothfusz regression the National Weather Service actually
+// publishes, not a rule of thumb, so the panel agrees with whatever weather app you
+// check it against.
+//
+// The two-step structure is the NWS's own and matters: the regression is fitted for hot
+// conditions and misbehaves below about 80F, so a simpler linear form is tried first and
+// only handed over to the regression once it clears 80. The two correction terms cover
+// the corners where the regression is known to be weak - very dry heat, and very humid
+// weather in the low 80s.
+float heatIndexF(float tempF, float humidity) {
+  // Simple form first, averaged with the air temperature as the NWS specifies.
+  const float simple =
+      0.5f * (tempF + 61.0f + ((tempF - 68.0f) * 1.2f) + (humidity * 0.094f));
+  if ((simple + tempF) / 2.0f < 80.0f) {
+    return (simple + tempF) / 2.0f;
+  }
+
+  const float t = tempF;
+  const float r = humidity;
+  float hi = -42.379f + 2.04901523f * t + 10.14333127f * r - 0.22475541f * t * r -
+             0.00683783f * t * t - 0.05481717f * r * r + 0.00122874f * t * t * r +
+             0.00085282f * t * r * r - 0.00000199f * t * t * r * r;
+
+  if (r < 13.0f && t >= 80.0f && t <= 112.0f) {
+    hi -= ((13.0f - r) / 4.0f) * sqrtf((17.0f - fabsf(t - 95.0f)) / 17.0f);
+  } else if (r > 85.0f && t >= 80.0f && t <= 87.0f) {
+    hi += ((r - 85.0f) / 10.0f) * ((87.0f - t) / 5.0f);
+  }
+
+  return hi;
+}
+
 uint8_t getMoonPhase() {
   // Reference: Jan 6, 2000 was a new moon
   // Calculate days since reference using timeinfo

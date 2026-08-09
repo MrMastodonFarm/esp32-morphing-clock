@@ -29,6 +29,10 @@ void getOpenMeteoData();
 
 // Moon phase functions
 uint8_t getMoonPhase();
+
+// NWS heat index ("feels like") in Fahrenheit, from air temperature and relative
+// humidity. Returns the air temperature unchanged when humidity is not a factor.
+float heatIndexF(float tempF, float humidity);
 bool isNightTime();
 void drawMoonPhase(int startx, int starty, int width, int height, bool enlarged);
 

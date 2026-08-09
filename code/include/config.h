@@ -50,6 +50,13 @@
 // display_init()). Overridable at runtime over MQTT; see MQTT_PANEL_BRIGHTNESS_TOPIC.
 #define PANEL_BRIGHTNESS 16
 
+// Show the heat index ("feels like") in place of humidity once it runs this many degrees
+// F above the air temperature. Below the threshold the two numbers are near-identical
+// and showing both wastes the slot - which is most of the year here, since humidity
+// stops mattering below about 80F. Drawn in SENSOR_FEELSLIKE_COLOR and terminated with a
+// degree dot rather than a %, so it reads as a temperature and not a second humidity.
+#define FEELS_LIKE_DELTA_F 5
+
 // Watchdog settings
 #define WDT_TIMEOUT 60   // If the WDT is not reset within X seconds, reboot the unit
         // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!

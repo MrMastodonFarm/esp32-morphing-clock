@@ -57,6 +57,11 @@
 #define SENSOR_DATA_HEIGHT 5
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
+// Feels-like (heat index) shown in place of humidity - see FEELS_LIKE_DELTA_F.
+// Amber reads as heat and is clearly distinct from the green air temperature
+// beside it, which is the whole point: two bare numbers in one colour would be
+// ambiguous.
+#define SENSOR_FEELSLIKE_COLOR ((0xFF & 0xF8) << 8) | ((0xA0 & 0xFC) << 3) | (0x00 >> 3)
 
 // Yellow Line Train data
 #define TRAIN_DATA_X 0

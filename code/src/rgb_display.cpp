@@ -4,6 +4,7 @@
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
 #include "common.h"
+#include "weather.h"
 
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
@@ -141,7 +142,25 @@ void displaySensorData() {
     // Same character positions as the live format below, so the slot keeps its shape.
     dma_display->print(" --  F  --%");
   } else {
-    dma_display->printf("%3.0f  F %3d%%", sensorTemp, sensorHumi);
+    // Humidity gives way to the heat index once the two temperatures actually diverge -
+    // below the threshold "feels like" just repeats the air temperature and the slot is
+    // better spent on humidity.
+    const float feelsLike = heatIndexF(sensorTemp, sensorHumi);
+    const bool showFeelsLike = (feelsLike - sensorTemp) >= FEELS_LIKE_DELTA_F;
+
+    dma_display->printf("%3.0f  F ", sensorTemp);
+
+    if (showFeelsLike) {
+      dma_display->setTextColor(SENSOR_FEELSLIKE_COLOR);
+      dma_display->printf("%3.0f", feelsLike);
+      // Degree dot instead of a %, so it reads as a temperature. Positioned from the
+      // cursor rather than a fixed offset because TomThumb is variable-advance - the
+      // width of "%3.0f" depends on which digits landed in it.
+      dma_display->fillRect(dma_display->getCursorX(), SENSOR_DATA_Y, 2, 2,
+                            SENSOR_FEELSLIKE_COLOR);
+    } else {
+      dma_display->printf("%3d%%", sensorHumi);
+    }
   }
 
   // Draw the degree symbol manually
