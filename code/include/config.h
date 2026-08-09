@@ -31,11 +31,18 @@
 #define WDT_TIMEOUT 60   // If the WDT is not reset within X seconds, reboot the unit
         // Do NOT set this too low, or the WDT will prevent OTA updates from completing!!
 
-// Widened watchdog used only for the duration of an OTA. ESPhttpUpdate.update()
-// blocks for the whole download-and-flash without ever returning to loop(), so the
+// Widened watchdog used only for the duration of an OTA. The flash write in
+// perform_update() blocks for the whole download without returning to loop(), so the
 // normal 60s WDT races it - and when the WDT wins it panics mid-flash, rebooting
 // onto the old image with no visible error. See perform_update() in ota_update.cpp.
 #define OTA_WDT_TIMEOUT 300
+
+// OTA HTTP timeouts. OTA_FIRST_BYTE_TIMEOUT_MS is how long perform_update() waits for
+// the response body to actually start arriving before giving up. The stock libraries
+// allow a blind 100ms here, which this clock's ~96ms-average WiFi RTT loses more often
+// than not - see the note in ota_update.cpp.
+#define OTA_HTTP_TIMEOUT_MS 20000
+#define OTA_FIRST_BYTE_TIMEOUT_MS 15000
 
 //Button pin
 #define BUTTON1_PIN 32
