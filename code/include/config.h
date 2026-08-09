@@ -30,19 +30,25 @@
 // Panel drive brightness, in the library's row-width units (0..PANEL_WIDTH), NOT 0-255.
 // The library's own default is 32.
 //
-// 12 is a deliberate, measured trade and should not be raised without re-testing. The
-// wide clock ghosts: a lit row bleeds a faint green copy of itself onto the row directly
-// above, because row 54 is driven by scan address 22 and address 21 (row 53) is clocked
-// immediately before it - the data lands before the address settles. It showed as a
-// dashed green line under the calendar row. Measured on 2026-08-09 against a static test
-// pattern: 32 obvious, 16 present, 12 barely visible, 8 essentially clean but too dim to
-// read across a lit room. Raising this back toward 32 will bring the ghost back.
+// The wide clock ghosts: a lit row bleeds a faint green copy of itself onto the row
+// directly above, because row 54 is driven by scan address 22 and address 21 (row 53) is
+// clocked immediately before it - the data lands before the address settles. It shows as
+// a dashed green line under the calendar row.
+//
+// Measured on 2026-08-09 against a static white-on-black test pattern: 32 (the library
+// default) obvious, 16 present, 12 barely visible, 8 essentially clean. That ranking is
+// real but it overstates what dimming buys on the actual clock, and 16 is the settled
+// value rather than 12: against the real display the ghost looked no less visible at 12,
+// because lowering drive dims the ghost and the content together while the eye adapts to
+// the new overall level. What matters is the ratio, and dimming barely moves it. So this
+// is set for legibility, not for ghost suppression - going below 16 costs readability
+// across a lit room and gains little.
 //
 // Lower brightness shortens the output-enable pulse, so there is less time for charge to
 // bleed onto the neighbouring address. It is a workaround for marginal panel timing, not
 // a fix - latch blanking, the knob actually intended for this, barely moved it (see
 // display_init()). Overridable at runtime over MQTT; see MQTT_PANEL_BRIGHTNESS_TOPIC.
-#define PANEL_BRIGHTNESS 12
+#define PANEL_BRIGHTNESS 16
 
 // Watchdog settings
 #define WDT_TIMEOUT 60   // If the WDT is not reset within X seconds, reboot the unit
