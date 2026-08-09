@@ -27,6 +27,11 @@ struct Scenario {
   float temp = 88.5F;
   int humidity = 61;
   bool sensorDead = false;
+  // Feels-like as pushed in over MQTT. Unset means "no feed", which is how the device
+  // behaves before the first message and what makes displaySensorData() fall back to
+  // computing a heat index locally.
+  bool haveFeelsLike = false;
+  float feelsLike = 0.0f;
   std::array<int, 4> trains = {4, 12, 19, 27};
   std::array<int, 4> blueTrains = {2, 9, 16, 24};
   std::string event = "Beach trip";
@@ -159,6 +164,9 @@ Scenario loadScenario(const std::string &path) {
         scenario.temp = parseScalar<float>(value, key);
       } else if (key == "humidity") {
         scenario.humidity = parseScalar<int>(value, key);
+      } else if (key == "feels_like") {
+        scenario.feelsLike = parseScalar<float>(value, key);
+        scenario.haveFeelsLike = true;
       } else if (key == "sensor_dead") {
         if (value == "true") {
           scenario.sensorDead = true;
@@ -246,6 +254,9 @@ void drawScene(const Scenario &scenario, std::optional<uint8_t> icon = {}) {
   setCString(sensorFlightNumber, scenario.flight);
   setCString(sensorFlightDestination, scenario.flightDestination);
   sensorDead = scenario.sensorDead;
+  sensorFeelsLike = scenario.feelsLike;
+  feelsLikeValid = scenario.haveFeelsLike;
+  lastFeelsLikeRead = millis();
 
   // On the device these two are mutually exclusive: newSensorData is only ever set by
   // an arriving MQTT message, which is also what clears sensorDead. Forcing both on

@@ -1,0 +1,17 @@
+# Cold and windy: feels-like arrives over MQTT and is BELOW the air temperature.
+# This is the case a locally computed heat index can never produce - heat index is a
+# hot-weather concept and returns roughly the air temperature below 80F - so without a
+# scenario like this the wind-chill branch and SENSOR_FEELSLIKE_COLD_COLOR have no
+# coverage at all until January.
+time         2026-01-15 07:30:00
+temp         28
+humidity     55
+feels_like   14
+sensor_dead  false
+trains       6 14 22 31
+bluetrains   3 11 19 28
+event        Ski trip
+event_days   9
+flight       UA451
+flight_dest  CO
+weather      fixtures/open-meteo-winter.json

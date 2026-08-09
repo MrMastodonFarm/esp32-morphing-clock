@@ -58,6 +58,14 @@ extern bool sensorDead;
 //The actual sensor data
 extern float sensorTemp;
 extern int sensorHumi;
+// Feels-like pushed in over MQTT (WeatherFlow). feelsLikeValid is an explicit flag
+// rather than a lastFeelsLikeRead == 0 sentinel: millis() is 0 at startup, so the
+// sentinel made "never received" and "received at t=0" indistinguishable, and the
+// staleness subtraction underflowed to ~49 days. displaySensorData() falls back to
+// computing a heat index locally while this is false.
+extern float sensorFeelsLike;
+extern bool feelsLikeValid;
+extern unsigned long lastFeelsLikeRead;
 extern int sensorTrain1;
 extern int sensorTrain2;
 extern int sensorTrain3;

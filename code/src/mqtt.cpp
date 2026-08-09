@@ -50,6 +50,19 @@ void mqtt_callback(char* topic, byte* payload, unsigned int length) {
     newSensorData = true;
   }
 
+  // WeatherFlow's feels-like, which unlike a locally computed heat index also covers the
+  // cold end (wind chill) and has wind and solar as inputs. Deliberately does NOT touch
+  // lastSensorRead or sensorDead: it is a nice-to-have from a different upstream, and a
+  // clock that declared its outdoor sensor alive on the strength of this arriving - while
+  // temperature and humidity had actually stopped - would be lying.
+  if ( strcmp(topic, MQTT_FEELS_LIKE_SENSOR_TOPIC) == 0) {
+    payload[length] = 0;
+    sensorFeelsLike = atof((char *)payload);
+    feelsLikeValid = true;
+    lastFeelsLikeRead = millis();
+    newSensorData = true;
+  }
+
     if ( strcmp(topic, MQTT_TRAIN1_SENSOR_TOPIC) == 0) {
     payload[length] = 0;
     sensorTrain1 = atoi((char *)payload);
@@ -196,6 +209,7 @@ void reconnect() {
       Serial.println(MQTT_UPDATE_CMD_TOPIC);
       Serial.println(MQTT_TEMPERATURE_SENSOR_TOPIC);
       Serial.println(MQTT_HUMIDITY_SENSOR_TOPIC);
+      Serial.println(MQTT_FEELS_LIKE_SENSOR_TOPIC);
       Serial.println(MQTT_TRAIN1_SENSOR_TOPIC);
       Serial.println(MQTT_TRAIN2_SENSOR_TOPIC);
       Serial.println(MQTT_TRAIN3_SENSOR_TOPIC);
@@ -213,6 +227,7 @@ void reconnect() {
       client.subscribe(MQTT_UPDATE_CMD_TOPIC);
       client.subscribe(MQTT_TEMPERATURE_SENSOR_TOPIC);
       client.subscribe(MQTT_HUMIDITY_SENSOR_TOPIC);
+      client.subscribe(MQTT_FEELS_LIKE_SENSOR_TOPIC);
       client.subscribe(MQTT_TRAIN1_SENSOR_TOPIC);
       client.subscribe(MQTT_TRAIN2_SENSOR_TOPIC);
       client.subscribe(MQTT_TRAIN3_SENSOR_TOPIC);

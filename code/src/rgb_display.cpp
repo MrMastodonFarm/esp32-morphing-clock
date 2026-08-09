@@ -3,6 +3,8 @@
 
 #include <ESP32-HUB75-MatrixPanel-I2S-DMA.h>
 
+#include <math.h>
+
 #include "common.h"
 #include "weather.h"
 
@@ -142,22 +144,33 @@ void displaySensorData() {
     // Same character positions as the live format below, so the slot keeps its shape.
     dma_display->print(" --  F  --%");
   } else {
-    // Humidity gives way to the heat index once the two temperatures actually diverge -
-    // below the threshold "feels like" just repeats the air temperature and the slot is
-    // better spent on humidity.
-    const float feelsLike = heatIndexF(sensorTemp, sensorHumi);
-    const bool showFeelsLike = (feelsLike - sensorTemp) >= FEELS_LIKE_DELTA_F;
+    // Prefer the feels-like pushed in over MQTT (WeatherFlow: has wind and solar as
+    // inputs, and covers the cold end via wind chill). Fall back to computing a heat
+    // index locally when none has arrived recently - that upstream is a cloud service
+    // and it does go away, and losing the whole readout with it would be worse than a
+    // slightly less informed number.
+    const bool haveFeed =
+        feelsLikeValid &&
+        (millis() - lastFeelsLikeRead) < 1000UL * SENSOR_DEAD_INTERVAL_SEC;
+    const float feelsLike = haveFeed ? sensorFeelsLike : heatIndexF(sensorTemp, sensorHumi);
+
+    // Threshold is on the absolute difference, not just "hotter than". Wind chill puts
+    // feels-like *below* air temperature, and a one-sided test would silently disable
+    // this all winter - which is exactly when it is most worth showing.
+    const float delta = feelsLike - sensorTemp;
+    const bool showFeelsLike = fabsf(delta) >= FEELS_LIKE_DELTA_F;
 
     dma_display->printf("%3.0f  F ", sensorTemp);
 
     if (showFeelsLike) {
-      dma_display->setTextColor(SENSOR_FEELSLIKE_COLOR);
+      const uint16_t flColor =
+          (delta >= 0) ? SENSOR_FEELSLIKE_HOT_COLOR : SENSOR_FEELSLIKE_COLD_COLOR;
+      dma_display->setTextColor(flColor);
       dma_display->printf("%3.0f", feelsLike);
       // Degree dot instead of a %, so it reads as a temperature. Positioned from the
       // cursor rather than a fixed offset because TomThumb is variable-advance - the
       // width of "%3.0f" depends on which digits landed in it.
-      dma_display->fillRect(dma_display->getCursorX(), SENSOR_DATA_Y, 2, 2,
-                            SENSOR_FEELSLIKE_COLOR);
+      dma_display->fillRect(dma_display->getCursorX(), SENSOR_DATA_Y, 2, 2, flColor);
     } else {
       dma_display->printf("%3d%%", sensorHumi);
     }

@@ -30,7 +30,7 @@ Use it when a photo of the running clock cannot settle something — it drives s
 
 There is no linter, and the only automated test is the simulator's golden-image check (`cd sim && make check` / `make VARIANT=64x64 check`). Beyond that, verification is "it compiles" plus watching the serial log / the panel. **Run `pio run` with no `-e` before pushing a shared change** — that is what catches a config macro added to one variant and not the other.
 
-**The build fails on a fresh clone until you create `code/include/creds_mqtt.h`.** It is gitignored and *no `.sample` exists for it* (only the SSL certs have samples). It must define: `WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_SERVER`, `MQTT_PORT`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_CLIENT_ID`, `OTA_URL`, and every topic macro consumed by `mqtt.cpp` (`MQTT_UPDATE_CMD_TOPIC`, `MQTT_TEMPERATURE_SENSOR_TOPIC`, `MQTT_HUMIDITY_SENSOR_TOPIC`, `MQTT_TRAIN1..4_SENSOR_TOPIC`, `MQTT_BLUE_TRAIN1..4_SENSOR_TOPIC`, `MQTT_NEXT_EVENT_SENSOR_TOPIC`, `MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC`, `MQTT_FLIGHT_NUMBER_TOPIC`, `MQTT_FLIGHT_DESTINATION_TOPIC`).
+**The build fails on a fresh clone until you create `code/include/creds_mqtt.h`.** It is gitignored and *no `.sample` exists for it* (only the SSL certs have samples). It must define: `WIFI_SSID`, `WIFI_PASSWORD`, `MQTT_SERVER`, `MQTT_PORT`, `MQTT_USERNAME`, `MQTT_PASSWORD`, `MQTT_CLIENT_ID`, `OTA_URL`, and every topic macro consumed by `mqtt.cpp` (`MQTT_UPDATE_CMD_TOPIC`, `MQTT_TEMPERATURE_SENSOR_TOPIC`, `MQTT_HUMIDITY_SENSOR_TOPIC`, `MQTT_FEELS_LIKE_SENSOR_TOPIC`, `MQTT_TRAIN1..4_SENSOR_TOPIC`, `MQTT_BLUE_TRAIN1..4_SENSOR_TOPIC`, `MQTT_NEXT_EVENT_SENSOR_TOPIC`, `MQTT_NEXT_EVENT_DAYS_TILL_SENSOR_TOPIC`, `MQTT_FLIGHT_NUMBER_TOPIC`, `MQTT_FLIGHT_DESTINATION_TOPIC`).
 
 It must also define `MQTT_TOPIC_PREFIX` (the shared topic namespace) and, for the 64x64 build, `MQTT_CLIENT_ID_64X64`, `MQTT_UPDATE_CMD_TOPIC_64X64` and `OTA_URL_64X64` — see "Panel variants". `include/device_identity.h` `#error`s with instructions if the last three are missing, so you cannot accidentally build a 64x64 image carrying the 128x64's identity.
 
@@ -143,6 +143,8 @@ Actual topic strings live in `creds_mqtt.h`; the deployed convention is a `Morph
 |-------|---------|--------|
 | `.../sensor/temperature` | float | Outdoor temp; also refreshes today's weather block |
 | `.../sensor/humidity` | int | Outdoor humidity |
+| `.../sensor/feelsLike` | float | WeatherFlow feels-like; replaces humidity in the readout when it differs from air temp by `FEELS_LIKE_DELTA_F` |
+| `.../panel/brightness` | int 1..`PANEL_WIDTH` | Panel drive brightness. **Publish retained** or it reverts to `PANEL_BRIGHTNESS` on reboot |
 | `.../sensor/train1`..`train4` | int | Yellow line arrivals (minutes) |
 | `.../sensor/bluetrain1`..`bluetrain4` | int | Blue line arrivals (minutes) |
 | `.../sensor/vacationCalendarEvent` | string | Next event name (≤64 chars) |

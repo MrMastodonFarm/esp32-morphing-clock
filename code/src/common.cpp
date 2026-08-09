@@ -56,6 +56,9 @@ unsigned long messageDisplayMillis = 0;
 // Sensor data
 float sensorTemp;
 int sensorHumi;
+float sensorFeelsLike = 0;
+bool feelsLikeValid = false;
+unsigned long lastFeelsLikeRead = 0;
 int sensorTrain1;
 int sensorTrain2;
 int sensorTrain3;
