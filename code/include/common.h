@@ -76,8 +76,16 @@ extern int sensorBlueTrain3;
 extern int sensorBlueTrain4;
 extern char sensorNextEvent[65];
 extern int sensorDaysTillNextEvent;
-extern char sensorFlightDestination[3];
-extern char sensorFlightNumber[6];
+// Sized for the payloads FlightRadar24 actually publishes, plus the NUL. The
+// destination is a 3-letter IATA code ("PIT"); 4 bytes leaves room for a 4-letter
+// ICAO one. The flight number is a 2-letter airline plus up to 4 digits
+// ("AA1985"); 8 bytes covers a 3-letter ICAO callsign prefix too.
+//
+// These are not cosmetic limits - copyPayload() in mqtt.cpp *rejects* anything that
+// does not fit rather than truncating it, so a buffer one byte too small makes the
+// field silently stop updating. Both were exactly one byte short of the real feed.
+extern char sensorFlightDestination[5];
+extern char sensorFlightNumber[8];
 
 //Just a heartbeat for the watchdog...
 extern bool heartBeat;

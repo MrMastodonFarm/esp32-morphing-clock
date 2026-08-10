@@ -58,12 +58,17 @@ static bool parseNumberPayload(const byte *payload, unsigned int length, float *
 //
 // The previous strncpy(dest, payload, length) + dest[length] = 0 wrote past the end of
 // the destination for any payload longer than it. That was not theoretical:
-// sensorFlightDestination is 3 bytes and "unavailable" is 11, so one routine Home
+// sensorFlightDestination was 3 bytes and "unavailable" is 11, so one routine Home
 // Assistant reload put a NUL nine bytes past the end of the array, into whatever global
 // followed it.
 //
 // Rejects rather than truncates. A truncated "unavailable" would display as "un" and
 // look like a real flight code; refusing leaves the last good value on screen.
+//
+// The flip side, learned the hard way: a destination buffer that is one byte too small
+// for the *real* feed makes that field silently stop updating altogether, because a
+// legitimate value is now indistinguishable from junk. Size the buffers in common.h to
+// the real payload plus NUL - see the note there.
 static bool copyPayload(char *dest, size_t destSize, const byte *payload,
                         unsigned int length) {
   if (length >= destSize) {
