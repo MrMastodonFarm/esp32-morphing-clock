@@ -77,6 +77,10 @@
 // is expected to show up in Alexandria.
 #define SENSOR_FEELSLIKE_COLD_ESTIMATED_COLOR ((0x18 & 0xF8) << 8) | ((0x38 & 0xFC) << 3) | (0x80 >> 3)
 
+// The wide panel has the width for all four arrivals; the square one does not and shows
+// three (see config_64x64.h).
+#define TRAIN_ARRIVALS_SHOWN 4
+
 // Yellow Line Train data
 #define TRAIN_DATA_X 0
 #define TRAIN_DATA_Y 0
@@ -102,6 +106,11 @@
 #define CALENDAR_FONT NULL
 #define CALENDAR_CURSOR_Y MESSAGE_LINE_1_Y
 #define CALENDAR_DAYS_FORMAT " -%3d days"
+
+// The wide panel has room for both the flight and the sensor readout, so the flight is
+// drawn here. The square one spends these pixels on temp/humidity/feels-like instead -
+// see config_64x64.h.
+#define FLIGHT_DISPLAY_ENABLED 1
 
 //Flight Data - number on the left of the line, destination alongside it at +42.
 #define FLIGHT_DATA_X 64

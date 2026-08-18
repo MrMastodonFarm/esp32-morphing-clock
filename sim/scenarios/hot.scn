@@ -1,0 +1,23 @@
+# Three-digit air temperature AND a three-digit feels-like - the widest the outdoor
+# readout can ever be, and an ordinary Alexandria July afternoon rather than an edge case.
+#
+# This scenario exists because it was missing. Every other scenario is two-digit, so the
+# 64x64's readout was first sized at 24px off "88 97" and rendered fine everywhere - while
+# "101 114" needs 28px and ran its last digit and the degree dot off the right edge of the
+# panel. Nothing would have shown that until a hot day in July, on a clock hanging on a
+# wall, where it reads as a glitch rather than as a layout bug.
+#
+# Pair it with windchill.scn, which covers the other extreme: '-' advances a full 4px, so
+# "-12 -20" is also 28px. Between the two, both ends of the width budget are pinned.
+time         2026-07-21 15:20:00
+temp         101
+humidity     78
+feels_like   114
+sensor_dead  false
+trains       6 13 21 29
+bluetrains   4 11 18 26
+event        Pool day
+event_days   3
+flight       AA123
+flight_dest  MI
+weather      fixtures/open-meteo-summer.json

@@ -118,6 +118,87 @@ void clearStatusMessage() {
    CJBMessage(CJB_MESSAGE); //refresh silly inside joke after the status message goes away
 }
 
+// Which feels-like number to trust, what colour it has earned, and whether it is far
+// enough from the air temperature to be worth drawing at all.
+//
+// Shared by both panel layouts on purpose. The 128x64 draws one row and the 64x64 two
+// stacked lines, but the *decision* is identical, and it is the subtle part: the
+// feed-versus-fallback distinction and its muted colours are the whole reason a dead
+// upstream cannot masquerade as a live reading. Duplicating that per variant is how the
+// two would quietly drift apart.
+struct FeelsLikeReading {
+  float value;
+  uint16_t color;
+  bool show;
+};
+
+static FeelsLikeReading currentFeelsLike() {
+  // Prefer the feels-like pushed in over MQTT (WeatherFlow: has wind and solar as
+  // inputs, and covers the cold end via wind chill). Fall back to computing a heat
+  // index locally when none has arrived recently - that upstream is a cloud service
+  // and it does go away, and losing the whole readout with it would be worse than a
+  // slightly less informed number.
+  const bool haveFeed =
+      feelsLikeValid &&
+      (millis() - lastFeelsLikeRead) < 1000UL * SENSOR_DEAD_INTERVAL_SEC;
+  const float value = haveFeed ? sensorFeelsLike : heatIndexF(sensorTemp, sensorHumi);
+
+  // Threshold is on the absolute difference, not just "hotter than". Wind chill puts
+  // feels-like *below* air temperature, and a one-sided test would silently disable
+  // this all winter - which is exactly when it is most worth showing.
+  const float delta = value - sensorTemp;
+
+  // Hue is direction, intensity is provenance: a muted colour means nobody pushed us
+  // a feels-like and this is our own heat index. Without that the fallback is
+  // invisible - the panel would keep showing a plausible number with the feed dead,
+  // which is precisely how the flight display went stale for five days unnoticed.
+  const uint16_t color =
+      (delta >= 0)
+          ? (haveFeed ? SENSOR_FEELSLIKE_HOT_COLOR : SENSOR_FEELSLIKE_HOT_ESTIMATED_COLOR)
+          : (haveFeed ? SENSOR_FEELSLIKE_COLD_COLOR : SENSOR_FEELSLIKE_COLD_ESTIMATED_COLOR);
+
+  return {value, color, fabsf(delta) >= FEELS_LIKE_DELTA_F};
+}
+
+#ifdef SENSOR_DATA_STACKED
+// Total pen advance for a string in `font` - the distance the cursor travels, which is
+// what a following glyph or a hand-drawn dot is positioned by.
+//
+// NOT getTextBounds(): that measures the ink's bounding box, which for these strings came
+// out 4px wider than the advance and pushed everything 4px off the right edge. Ink extent
+// and pen advance are different measurements, and the one that matters when you are
+// placing something *after* the text is the advance.
+// Direct struct access rather than the pgm_read_* macros the GFX library uses
+// internally: those exist for AVR's split address space, and both targets here (ESP32 and
+// the host simulator) are flat, so PROGMEM is ordinary memory. pgm_read_pointer is not
+// even declared outside Adafruit_GFX.cpp.
+static uint16_t textAdvance(const GFXfont *font, const char *text) {
+  uint16_t advance = 0;
+  for (const char *p = text; *p; ++p) {
+    const uint8_t c = (uint8_t)*p;
+    if (c < font->first || c > font->last) {
+      continue;
+    }
+    advance += font->glyph[c - font->first].xAdvance;
+  }
+  return advance;
+}
+
+// TomThumb reserves 1px of right side bearing in every glyph's advance - the gap before
+// the next character. At the end of a line nothing follows it, so it is dead space, and
+// including it would leave the line 1px short of the edge everything else aligns to.
+#define TOMTHUMB_RIGHT_BEARING 1
+
+// Cursor X that puts `drawnWidth` pixels of content flush against the sensor slot's right
+// edge. Clamped so an over-wide reading grows leftward into the slot rather than off the
+// left of it - the slot is sized for the widest reading, but clamping means an
+// unanticipated one degrades by overlapping its neighbour instead of vanishing.
+static int16_t rightAlignedSensorX(uint16_t drawnWidth) {
+  const int16_t x = SENSOR_DATA_X + SENSOR_DATA_WIDTH - (int16_t)drawnWidth;
+  return x < SENSOR_DATA_X ? (int16_t)SENSOR_DATA_X : x;
+}
+#endif
+
 // Outdoor temp/humidity, or a dashed placeholder once the feed goes stale.
 //
 // Both states paint the same slot in the same font and clear the same rect, so a
@@ -133,50 +214,85 @@ void displaySensorData() {
 
   const uint16_t color = sensorDead ? SENSOR_ERROR_DATA_COLOR : SENSOR_DATA_COLOR;
 
-  dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
   dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-  dma_display->setTextColor(color);
   dma_display->setFont(&TomThumb);
+
+#ifdef SENSOR_DATA_STACKED
+  // Square panel: two stacked lines in the slot above the today icon, because three
+  // numbers do not fit on one row this narrow. Line 1 holds the two temperatures side by
+  // side so they can be compared at a glance; line 2 holds humidity, which keeps its %
+  // because it is the one number here that is not degrees.
+  //
+  // Both lines are RIGHT-ALIGNED against the panel edge rather than left-aligned from
+  // SENSOR_DATA_X. These are variable-width numbers - two digits most of the year, three
+  // in a July heat index, four with a minus sign in a freeze - and left-aligning them
+  // gets it wrong at both ends: a ragged gap on the right in the common case, and ink off
+  // the edge of the panel in the uncommon one. Aligning to the edge that cannot move is
+  // what lets 20px of everyday content and 28px of extreme content both land correctly.
+  char tempStr[8] = "--";
+  char flStr[10]  = "";
+  char humStr[8]  = "--%";
+  FeelsLikeReading fl = {0.0f, color, false};
+
+  if (!sensorDead) {
+    // Unpadded %.0f, not the 128x64's %3.0f: right-alignment is doing the job the
+    // padding used to, and a leading space would push a three-digit reading off the slot.
+    snprintf(tempStr, sizeof(tempStr), "%.0f", sensorTemp);
+    fl = currentFeelsLike();
+    if (fl.show) {
+      snprintf(flStr, sizeof(flStr), " %.0f", fl.value);
+    }
+    snprintf(humStr, sizeof(humStr), "%d%%", sensorHumi);
+  }
+
+  char line1[16];
+  snprintf(line1, sizeof(line1), "%s%s", tempStr, flStr);
+
+  dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
+  // The degree dot is 2px of drawn width that is not in the string, and unlike a glyph it
+  // fills its cell completely - so no bearing is subtracted here.
+  dma_display->setCursor(rightAlignedSensorX(textAdvance(&TomThumb, line1) + 2),
+                         SENSOR_DATA_Y + 5);   //Y offset because custom fonts draw from bottom instead of top
+  dma_display->setTextColor(color);
+  dma_display->print(tempStr);
+  if (fl.show) {
+    dma_display->setTextColor(fl.color);
+    dma_display->print(flStr);
+  }
+  // The degree dot lands after whichever number ended the line - the feels-like when it
+  // is shown, otherwise the air temperature - so the line always reads as degrees.
+  // Positioned from the cursor rather than a fixed offset because TomThumb is
+  // variable-advance: a minus sign or a third digit moves it.
+  dma_display->fillRect(dma_display->getCursorX(), SENSOR_DATA_Y, 2, 2,
+                        fl.show ? fl.color : color);
+
+  dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_LINE2_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
+  dma_display->setCursor(rightAlignedSensorX(textAdvance(&TomThumb, humStr) -
+                                             TOMTHUMB_RIGHT_BEARING),
+                         SENSOR_DATA_LINE2_Y + 5);
+  dma_display->setTextColor(color);
+  dma_display->print(humStr);
+#else
+  // Wide panel: one row, "temp F humidity-or-feelslike".
+  dma_display->fillRect(SENSOR_DATA_X, SENSOR_DATA_Y, SENSOR_DATA_WIDTH, SENSOR_DATA_HEIGHT, 0);
+  dma_display->setTextColor(color);
   dma_display->setCursor(SENSOR_DATA_X, SENSOR_DATA_Y+5);   //Y offset because custom fonts draw from bottom instead of top
 
   if (sensorDead) {
     // Same character positions as the live format below, so the slot keeps its shape.
     dma_display->print(" --  F  --%");
   } else {
-    // Prefer the feels-like pushed in over MQTT (WeatherFlow: has wind and solar as
-    // inputs, and covers the cold end via wind chill). Fall back to computing a heat
-    // index locally when none has arrived recently - that upstream is a cloud service
-    // and it does go away, and losing the whole readout with it would be worse than a
-    // slightly less informed number.
-    const bool haveFeed =
-        feelsLikeValid &&
-        (millis() - lastFeelsLikeRead) < 1000UL * SENSOR_DEAD_INTERVAL_SEC;
-    const float feelsLike = haveFeed ? sensorFeelsLike : heatIndexF(sensorTemp, sensorHumi);
-
-    // Threshold is on the absolute difference, not just "hotter than". Wind chill puts
-    // feels-like *below* air temperature, and a one-sided test would silently disable
-    // this all winter - which is exactly when it is most worth showing.
-    const float delta = feelsLike - sensorTemp;
-    const bool showFeelsLike = fabsf(delta) >= FEELS_LIKE_DELTA_F;
-
     dma_display->printf("%3.0f  F ", sensorTemp);
 
-    if (showFeelsLike) {
-      // Hue is direction, intensity is provenance: a muted colour means nobody pushed us
-      // a feels-like and this is our own heat index. Without that the fallback is
-      // invisible - the panel would keep showing a plausible number with the feed dead,
-      // which is precisely how the flight display went stale for five days unnoticed.
-      const uint16_t flColor =
-          (delta >= 0)
-              ? (haveFeed ? SENSOR_FEELSLIKE_HOT_COLOR : SENSOR_FEELSLIKE_HOT_ESTIMATED_COLOR)
-              : (haveFeed ? SENSOR_FEELSLIKE_COLD_COLOR : SENSOR_FEELSLIKE_COLD_ESTIMATED_COLOR);
-      dma_display->setTextColor(flColor);
-      dma_display->printf("%3.0f", feelsLike);
+    const FeelsLikeReading fl = currentFeelsLike();
+    if (fl.show) {
+      dma_display->setTextColor(fl.color);
+      dma_display->printf("%3.0f", fl.value);
       // Degree dot instead of a %, so it reads as a temperature. Positioned from the
       // cursor rather than a fixed offset because TomThumb is variable-advance - the
       // width of "%3.0f" depends on which digits landed in it.
-      dma_display->fillRect(dma_display->getCursorX(), SENSOR_DATA_Y, 2, 2, flColor);
+      dma_display->fillRect(dma_display->getCursorX(), SENSOR_DATA_Y, 2, 2, fl.color);
     } else {
       dma_display->printf("%3d%%", sensorHumi);
     }
@@ -184,6 +300,7 @@ void displaySensorData() {
 
   // Draw the degree symbol manually
   dma_display->fillRect(SENSOR_DATA_X + 11, SENSOR_DATA_Y, 2, 2, color);
+#endif
 
   dma_display->setFont();
   newSensorData = false;
@@ -198,13 +315,21 @@ void displayTrainData() {
     dma_display->fillCircle(TRAIN_DATA_X+2, TRAIN_DATA_Y+2, 2, 0xFE80); //yellow circle to identify Yellow Line
     dma_display->setCursor(TRAIN_DATA_X+8, TRAIN_DATA_Y+5);   //Y offset because custom fonts draw from bottom instead of top
     dma_display->setTextColor(TRAIN_DATA_COLOR);
+#if TRAIN_ARRIVALS_SHOWN >= 4
     dma_display->printf("%d %d %d %d", sensorTrain1, sensorTrain2, sensorTrain3, sensorTrain4);
+#else
+    dma_display->printf("%d %d %d", sensorTrain1, sensorTrain2, sensorTrain3);
+#endif
     //Blue Line
     dma_display->fillRect(TRAIN_DATA_X, TRAIN_DATA_Y+7, TRAIN_DATA_WIDTH, TRAIN_DATA_HEIGHT, 0);
     dma_display->fillCircle(TRAIN_DATA_X+2, TRAIN_DATA_Y+9, 2, 0x04FB); //blue circle to identify Blue Line
     dma_display->setCursor(TRAIN_DATA_X+8, TRAIN_DATA_Y+12);   //Y offset because custom fonts draw from bottom instead of top
     dma_display->setTextColor(0x04FB);
-    dma_display->printf("%d %d %d %d", sensorBlueTrain1, sensorBlueTrain2, sensorBlueTrain3, sensorBlueTrain4); 
+#if TRAIN_ARRIVALS_SHOWN >= 4
+    dma_display->printf("%d %d %d %d", sensorBlueTrain1, sensorBlueTrain2, sensorBlueTrain3, sensorBlueTrain4);
+#else
+    dma_display->printf("%d %d %d", sensorBlueTrain1, sensorBlueTrain2, sensorBlueTrain3);
+#endif
 
     dma_display->setFont();
     newTrainData = false;
@@ -227,7 +352,14 @@ void displayCalendarData() {
     newCalendarData = false;
   }
 }
+// Flight number and destination. Drawn only where the panel has the room for them -
+// the square variant spends those exact pixels on the outdoor sensor readout, so it
+// sets FLIGHT_DISPLAY_ENABLED to 0. The flag is still cleared in that case: the feed
+// keeps arriving, and a set flag nothing consumes would re-trigger every loop().
 void displayFlightNumber() {
+#if !FLIGHT_DISPLAY_ENABLED
+  newFlightNumber = false;
+#else
   if (newFlightNumber) {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
@@ -240,8 +372,12 @@ void displayFlightNumber() {
     dma_display->setFont();
     newFlightNumber = false;
   }
+#endif
 }
 void displayFlightDestination() {
+#if !FLIGHT_DISPLAY_ENABLED
+  newFlightDestination = false;
+#else
   if (newFlightDestination) {
     dma_display->setTextSize(1);     // size 1 == 8 pixels high
     dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
@@ -254,6 +390,7 @@ void displayFlightDestination() {
     dma_display->setFont();
     newFlightDestination = false;
   }
+#endif
 }
 /* void displayLightData(float luxValue) {
   dma_display->fillRect(LIGHT_DATA_X, LIGHT_DATA_Y, LIGHT_DATA_WIDTH, LIGHT_DATA_HEIGHT, 0);

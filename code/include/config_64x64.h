@@ -43,15 +43,56 @@
 #define DATE_FONT &TomThumb
 #define DATE_CLEAR_Y DOW_Y - 5
 
-// Weather sensor data.
-// NOTE: X=65 puts this block off the right edge of a 64px-wide panel, so outdoor
-// temp/humidity is effectively not shown on this variant. Inherited as-is from the
-// 64x64 repo - move it on-panel if you want it back. The width still has to cover the
-// widest drawn string (see config_128x64.h) so it works if you do.
-#define SENSOR_DATA_X 65
-#define SENSOR_DATA_Y 43
-#define SENSOR_DATA_WIDTH 36
+// Weather sensor data. Lives in the slot the flight number/destination used to occupy,
+// directly above the 16x16 today icon - which is why FLIGHT_DISPLAY_ENABLED is 0 below.
+// These are literally the same pixels; the panel has no other opening (measured against
+// every golden plus 10/11/12 o'clock renders, the only two free regions large enough for
+// a line of TomThumb were this one and the status line's row, and the status line clears
+// its full width on every message).
+//
+// Was X=65 - off the right edge of a 64px panel - inherited from the standalone 64x64
+// repo, so this variant showed no live outdoor reading at all.
+//
+// TWO STACKED LINES, unlike the 128x64's single row, because three numbers do not fit
+// across 28px:
+//
+//     line 1   air temperature, then feels-like beside it when it diverges    "88 97."
+//     line 2   humidity, with the % that stops it reading as a temperature    "61%"
+//
+// Width is set by the WIDEST line this can ever draw, not the typical one. From
+// TomThumb's real metrics (digit xAdvance 4, space xAdvance 2 - note the space is *half*
+// a digit, not the same - plus the hand-drawn 2px degree dot):
+//
+//     "88 97."      20px   the everyday case
+//     "101 114."    28px   an ordinary Alexandria July afternoon
+//     "-12 -20."    28px   a cold snap with wind; '-' advances a full 4px
+//
+// So the slot is 28px, X=36..63, and both lines are drawn RIGHT-ALIGNED inside it (see
+// rgb_display.cpp) rather than left-aligned from X. Alignment is what makes one slot serve
+// both extremes: everyday content sits flush at x44..63 and a heat wave grows leftward to
+// x41 without the edge ever moving.
+//
+// It was 24px at X=40 and left-aligned first, sized off the everyday case, and 101F with a
+// heat index of 114 ran the last digit and the degree dot straight off the right edge -
+// a summer bug that would not have shown up until July, on a wall, where it reads as a
+// glitch rather than a layout error. sim/scenarios/hot.scn exists to keep it out.
+//
+// X=36 is only affordable because TRAIN_ARRIVALS_SHOWN is 3 (ink ends x32, so a 3px gap).
+// Restoring the fourth arrival would push train ink to x42 and straight through this.
+// The overlap with the train row's clear rect (x0..40) is harmless - both clear to black.
+//
+// The feels-like keeps the 128x64's FEELS_LIKE_DELTA_F threshold rather than always
+// drawing: below it the value is within a couple of degrees of the air temperature, and
+// "88 88" is noise. When it is hidden the degree dot moves onto the air temperature so
+// the line still reads as a temperature rather than a bare number.
+#define SENSOR_DATA_STACKED 1
+#define SENSOR_DATA_X 36
+#define SENSOR_DATA_Y 0
+#define SENSOR_DATA_WIDTH 28
 #define SENSOR_DATA_HEIGHT 6
+// Second line's top edge. 7 keeps a 1px gap under line 1's 6px band and still lands the
+// glyphs clear of the today icon, which starts at row 14.
+#define SENSOR_DATA_LINE2_Y 7
 #define SENSOR_DATA_COLOR ((0x00 & 0xF8) << 8) | ((0x8F & 0xFC) << 3) | (0x00 >> 3)
 #define SENSOR_ERROR_DATA_COLOR ((0xFF & 0xF8) << 8) | ((0x00 & 0xFC) << 3) | (0x00 >> 3)
 // Feels-like shown in place of humidity - see FEELS_LIKE_DELTA_F. Two bare numbers in
@@ -73,6 +114,21 @@
 // very dry heat (110F/10% -> 104). Defined so the four states are total, not because it
 // is expected to show up in Alexandria.
 #define SENSOR_FEELSLIKE_COLD_ESTIMATED_COLOR ((0x18 & 0xF8) << 8) | ((0x38 & 0xFC) << 3) | (0x80 >> 3)
+
+// Three arrivals per line, not the wide panel's four. This is arithmetic, not taste:
+// "12 19 27 34" is 38px of TomThumb advance, and starting at TRAIN_DATA_X+8 its ink
+// reaches x42 - through the sensor readout, whose left edge is x36. Four two-digit arrivals is
+// the common case, not an edge one, so the row would overrun most of the time. Measured:
+// three arrivals end at x32, leaving a 3px gap. (Pathological 3-digit values still
+// overlap, which is what sim/scenarios/stress.scn shows on purpose; Metro headways mean a
+// 100-minute arrival is not reachable.)
+//
+// The same overrun existed before, when these pixels held the flight code; it simply
+// mattered less because a flight number changed a few times a day while the sensor block
+// repaints every minute, so the clipping would now flicker.
+//
+// The fourth arrival is the one worth losing: it is 30-40 minutes out and not actionable.
+#define TRAIN_ARRIVALS_SHOWN 3
 
 // Yellow Line Train data
 #define TRAIN_DATA_X 0
@@ -100,8 +156,15 @@
 #define CALENDAR_CURSOR_Y MESSAGE_LINE_1_Y + 5
 #define CALENDAR_DAYS_FORMAT " -%3dd"
 
+// Flight display is OFF on this variant: the outdoor sensor readout took these pixels
+// (see SENSOR_DATA_X above). The MQTT feed is still subscribed and parsed - only the
+// drawing is skipped - so turning this back to 1 restores it with no other change,
+// at the cost of the temp/humidity/feels-like block.
+#define FLIGHT_DISPLAY_ENABLED 0
+
 //Flight Data - number on the top line, destination stacked underneath it (there is no
-//room to put them side by side as the 128x64 does).
+//room to put them side by side as the 128x64 does). Unused while
+//FLIGHT_DISPLAY_ENABLED is 0, kept so flipping it back needs no archaeology.
 #define FLIGHT_DATA_X 41
 #define FLIGHT_DATA_Y 0
 #define FLIGHT_DATA_WIDTH 24

@@ -64,9 +64,21 @@ The unsuffixed macros are treated as the 128x64's values (which is what they hav
 
 **The subtle part — `MQTT_TOPIC_PREFIX` vs `MQTT_CLIENT_ID`.** Every sensor topic in `creds_mqtt.h` must be defined as `MQTT_TOPIC_PREFIX "/sensor/..."`, *never* `MQTT_CLIENT_ID "/sensor/..."`. A macro's replacement list is expanded at its **use** site, so keying topics off the client id means `device_identity.h`'s `#undef MQTT_CLIENT_ID` silently repoints all of them at `MorphingClock64/sensor/...` — topics nothing publishes to. The 64x64 would compile cleanly, connect fine, and sit there with a blank panel. `creds_mqtt.h` was written that way originally and was split on 2026-08-07. To verify after touching that file, preprocess it for both variants and diff — the sensor topics must be identical and only client id / update topic / OTA URL may differ.
 
-**What the 64x64 deliberately does not have:** sunrise/sunset (the 128x64 fits them only in the two gaps flanking its 16x16 icon; there is no equivalent slack) and native 16x16 weather icons (it pixel-doubles the 8x8 artwork via `drawWeatherIcon(..., enlarged=true)`; the 128x64 calls `drawWeatherIcon16()`). `displaySunTimes()` is a deliberate no-op in `weather_layout_64x64.cpp` rather than an `#ifdef` at the call site.
+**What the 64x64 deliberately does not have:** sunrise/sunset (the 128x64 fits them only in the two gaps flanking its 16x16 icon; there is no equivalent slack), native 16x16 weather icons (it pixel-doubles the 8x8 artwork via `drawWeatherIcon(..., enlarged=true)`; the 128x64 calls `drawWeatherIcon16()`), **the flight number/destination**, and **the fourth train arrival on each line**. `displaySunTimes()` is a deliberate no-op in `weather_layout_64x64.cpp` rather than an `#ifdef` at the call site; the flight and train-count differences are config macros (`FLIGHT_DISPLAY_ENABLED`, `TRAIN_ARRIVALS_SHOWN`) read by the shared renderers in `rgb_display.cpp`.
 
-**Two inherited oddities in `config_64x64.h`,** carried over verbatim rather than silently "fixed": `SENSOR_DATA_X 65` and `HEARTBEAT_X 120` are both off the right edge of a 64px-wide panel. The outdoor temp/humidity block is therefore not visible on the square clock; the heartbeat is inert either way since `drawHeartBeat()` is not called from `loop()`.
+**The square panel is full — treat "where do I put this?" as a measurement, not a guess.** On 2026-08-17 the outdoor readout was moved on-panel (it had been at `SENSOR_DATA_X 65`, off the right edge, inherited from the standalone repo, so the square clock showed no live temperature at all). Finding room meant unioning every golden *plus* renders at 10/11/12 o'clock, and the answer was that exactly two regions were large enough for one line of TomThumb: the flight slot, and the status line's row — and the status line is unusable because `logStatusMessage()` clears `PANEL_WIDTH` on every message. There was no third option. The flight display was switched off to free those pixels; the MQTT feed is still subscribed and parsed, so `FLIGHT_DISPLAY_ENABLED 1` restores it at the cost of the readout.
+
+Two traps in that measurement, both of which will bite again:
+
+- **The goldens understate occupancy.** No scenario used a 4-digit time, so the hour-tens digit was dark in every one. Render 10/11/12 before believing any "free" column on the left. (The hour-tens digit is *always* a `1` in 12-hour format, so x0–6 of the clock band really is dead space — but that is a conclusion, not an assumption.) Likewise `p0` is the full-panel test pattern and will make everything look occupied; exclude it.
+- **TomThumb's space advance is 2px, not 4.** Deriving widths from "4px per character" overestimates by 2px per space, which is exactly the margin these decisions turn on. Read the `xAdvance` column in `vendor/Adafruit-GFX/Fonts/TomThumb.h` and measure the render.
+- **`getTextBounds()` is the wrong measurement for placing something *after* text**, and it is the obvious thing to reach for. It returns the ink's bounding box; the cursor moves by the sum of `xAdvance`. For these strings the two differ by 4px, which right-aligned the whole readout 4px off the panel edge and looked exactly like "there is spare room here". `textAdvance()` in `rgb_display.cpp` sums advances directly. The reverse correction applies at the other end: a glyph's advance includes 1px of right side bearing, dead space when nothing follows, hence `TOMTHUMB_RIGHT_BEARING`.
+
+**Right-align variable-width readings against the panel edge; do not left-align them from an origin.** The outdoor readout is two digits most of the year, three in a July heat index, four with a minus sign in a freeze. Left-aligned, that is wrong at both ends at once - a ragged gap on the right in the common case and ink off the panel in the uncommon one - and only the common case is ever in front of you while you work. Right-aligned, one 28px slot serves both: everyday content sits flush at x44..63 and a heat wave grows leftward to x41. `sim/scenarios/hot.scn` (101F air, 114 heat index) pins the wide end and `windchill.scn` pins the other, since `-` advances a full 4px and `"-12 -20"` is also 28px.
+
+That is also how the train row's overrun surfaced: `"12 19 27 34"` is 38px of advance and its ink reaches x42, through the readout's left edge at x40 — and *four two-digit arrivals is the common case*. Hence `TRAIN_ARRIVALS_SHOWN 3` on this variant (ink ends x32, a 7px gap). The overrun predates the change; it simply mattered less when those pixels held a flight code that updated a few times a day rather than a readout that repaints every minute.
+
+**One inherited oddity remains in `config_64x64.h`,** carried over verbatim rather than silently "fixed": `HEARTBEAT_X 120` is off the right edge of a 64px-wide panel. It is inert either way, since `drawHeartBeat()` is not called from `loop()`.
 
 ## Deploying without USB
 
@@ -82,7 +94,9 @@ The fix is three-part, and the third part was a *second*, independent bug hiding
 
 Verified 2026-08-08: five consecutive OTAs, 17–26s trigger-to-boot, every one `reset: SW`.
 
-**A device still running pre-fix firmware cannot receive this fix over OTA** — the broken path is the one doing the delivering. It needs one USB flash (`pio run -e <variant> -t upload`). The 128x64 got that on 2026-08-08; **the 64x64 has not, so OTA does not work on it yet.**
+**A device still running pre-fix firmware cannot receive this fix over OTA** — the broken path is the one doing the delivering. It needs one USB flash (`pio run -e <variant> -t upload`). The 128x64 got that on 2026-08-08 and **the 64x64 on 2026-08-17, so OTA now works on both.** The square clock's first wireless update was confirmed the same day: `MorphingClock64/state` reported `online | 64x64 | ... | elf 68eded36 | reset: SW`, and `ESP.restart()` occurs at exactly one place in the firmware (`ota_update.cpp:133`), reachable only after `Update.begin()`, `writeStream()`, `end()` and `isFinished()` have all succeeded. So `reset: SW` is by itself proof that a full image was written into the second app slot and validated — which also proves the `min_spiffs` table took, since `Update.begin()` cannot succeed against a single-slot table.
+
+**The clocks are physically attached to the user's own computer, not the dev box.** `lsusb` on the dev box never sees them, so a session there cannot run `-t upload` at all — USB work has to be handed to a Claude running on that machine. The handoff that works is to build here and ship the **four** esptool images (`bootloader.bin` @0x1000, `partitions.bin` @0x8000, `boot_app0.bin` @0xe000, `firmware.bin` @0x10000) with the exact command; do *not* tell the other machine to build from source, because `include/creds_mqtt.h` is gitignored with no `.sample` and a fresh clone cannot compile. Flashing `firmware.bin` alone is the mistake to avoid — it leaves the old partition table in place, which is usually the whole reason a wired flash was needed.
 
 **Verifying an OTA landed.** Every boot publishes a retained line to a per-device status topic:
 
@@ -143,14 +157,14 @@ Actual topic strings live in `creds_mqtt.h`; the deployed convention is a `Morph
 |-------|---------|--------|
 | `.../sensor/temperature` | float | Outdoor temp; also refreshes today's weather block |
 | `.../sensor/humidity` | int | Outdoor humidity |
-| `.../sensor/feelsLike` | float | WeatherFlow feels-like; replaces humidity in the readout when it differs from air temp by `FEELS_LIKE_DELTA_F` |
+| `.../sensor/feelsLike` | float | WeatherFlow feels-like, shown when it differs from air temp by `FEELS_LIKE_DELTA_F`. On the 128x64 it *replaces* humidity (one row); on the 64x64 it sits beside the air temp with humidity on a second line, so all three show at once |
 | `.../panel/brightness` | int 1..`PANEL_WIDTH` | Panel drive brightness. **Publish retained** or it reverts to `PANEL_BRIGHTNESS` on reboot |
 | `.../sensor/train1`..`train4` | int | Yellow line arrivals (minutes) |
 | `.../sensor/bluetrain1`..`bluetrain4` | int | Blue line arrivals (minutes) |
 | `.../sensor/vacationCalendarEvent` | string | Next event name (≤64 chars) |
 | `.../sensor/vacationCalendarDaysTill` | int | Days until that event |
-| `.../lastFlight/flightNumber` | string | Flight number, e.g. `AA1985` (≤7 chars) |
-| `.../lastFlight/destination` | string | Destination airport code, e.g. `PIT` (≤4 chars) |
+| `.../lastFlight/flightNumber` | string | Flight number, e.g. `AA1985` (≤7 chars). **128x64 only** — parsed but not drawn on the square clock, see `FLIGHT_DISPLAY_ENABLED` |
+| `.../lastFlight/destination` | string | Destination airport code, e.g. `PIT` (≤4 chars). 128x64 only, as above |
 | `.../update/req` | `1` | Triggers the HTTP OTA pull (**per-device topic** — see "Panel variants") |
 
 Any sensor message refreshes `lastSensorRead`; after `SENSOR_DEAD_INTERVAL_SEC` with nothing, `sensorDead` flips and the temp/humidity block renders in the error color.
