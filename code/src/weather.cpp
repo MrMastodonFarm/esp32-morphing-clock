@@ -4,6 +4,8 @@
 
 #include <HTTPClient.h>
 #include <WiFi.h>
+#include <Preferences.h>
+#include <time.h>
 #include <ArduinoJson.h>
 #include <math.h>
 //#include <Fonts/FreeSerifBold12pt7b.h>
@@ -17,6 +19,93 @@ char sunriseToday[6] = "";
 char sunsetToday[6] = "";
 bool weatherFailed = false;
 int failCount = 0;
+
+// Last good forecast, persisted in NVS so a cold boot (the square clock loses power
+// every night at 22:00) can draw something plausible while the first fetch is still
+// failing. The forecast barely moves overnight, so yesterday's is right far more
+// often than a blank panel is.
+struct WeatherCache {
+  uint32_t magic;
+  uint8_t forecast[5];
+  int8_t minT[5];
+  int8_t maxT[5];
+  int8_t minToday;
+  int8_t maxToday;
+  char sunrise[6];
+  char sunset[6];
+  uint32_t savedAt;  // epoch seconds, 0 if the clock had no valid time yet
+};
+static const uint32_t WEATHER_CACHE_MAGIC = 0x57544831;  // "WTH1"
+static const uint32_t WEATHER_CACHE_MAX_AGE_SEC = WEATHER_CACHE_MAX_AGE_HOURS * 3600UL;
+
+// When the data on the panel was actually fetched. Epoch is the authority (it survives
+// a reboot via the cache); the millis stamp is the fallback for a boot that fetched
+// live before NTP synced.
+uint32_t weatherDataEpoch = 0;          // 0 = unknown
+unsigned long weatherSuccessMillis = 0; // 0 = no live fetch yet this boot
+
+static uint32_t nowEpochIfValid() {
+  time_t now = time(nullptr);
+  return now > 1600000000 ? (uint32_t)now : 0;  // before 2020 means NTP has not synced
+}
+
+static void saveWeatherCache() {
+  WeatherCache c;
+  c.magic = WEATHER_CACHE_MAGIC;
+  memcpy(c.forecast, forecast5Days, sizeof(c.forecast));
+  memcpy(c.minT, minTemp, sizeof(c.minT));
+  memcpy(c.maxT, maxTemp, sizeof(c.maxT));
+  c.minToday = minTempToday;
+  c.maxToday = maxTempToday;
+  memcpy(c.sunrise, sunriseToday, sizeof(c.sunrise));
+  memcpy(c.sunset, sunsetToday, sizeof(c.sunset));
+  c.savedAt = weatherDataEpoch;
+  Preferences prefs;
+  if (prefs.begin("weather", false)) {
+    prefs.putBytes("last", &c, sizeof(c));
+    prefs.end();
+  }
+}
+
+bool loadWeatherCache() {
+  WeatherCache c;
+  Preferences prefs;
+  if (!prefs.begin("weather", true)) return false;
+  size_t n = prefs.getBytes("last", &c, sizeof(c));
+  prefs.end();
+  if (n != sizeof(c) || c.magic != WEATHER_CACHE_MAGIC) return false;
+  uint32_t now = nowEpochIfValid();
+  if (now && c.savedAt && now - c.savedAt > WEATHER_CACHE_MAX_AGE_SEC) {
+    Serial.println("Weather cache too old, ignoring");
+    return false;
+  }
+  memcpy(forecast5Days, c.forecast, sizeof(forecast5Days));
+  memcpy(minTemp, c.minT, sizeof(minTemp));
+  memcpy(maxTemp, c.maxT, sizeof(maxTemp));
+  minTempToday = c.minToday;
+  maxTempToday = c.maxToday;
+  memcpy(sunriseToday, c.sunrise, sizeof(sunriseToday));
+  memcpy(sunsetToday, c.sunset, sizeof(sunsetToday));
+  sunriseToday[sizeof(sunriseToday) - 1] = 0;
+  sunsetToday[sizeof(sunsetToday) - 1] = 0;
+  weatherDataEpoch = c.savedAt;
+  Serial.println("Weather: showing cached forecast until a fetch succeeds");
+  return true;
+}
+
+// True when what the panel shows is older than WEATHER_STALE_AFTER_SEC - or cannot be
+// dated at all. Rendered as the temp-range line in the error colour, so a feed that has
+// been quietly failing for days is visible rather than just a forecast that looks odd.
+bool weatherStale() {
+  uint32_t now = nowEpochIfValid();
+  if (now && weatherDataEpoch) {
+    return now - weatherDataEpoch > WEATHER_STALE_AFTER_SEC;
+  }
+  if (weatherSuccessMillis) {
+    return (millis() - weatherSuccessMillis) / 1000UL > WEATHER_STALE_AFTER_SEC;
+  }
+  return true;  // cached data with no usable timestamp, or nothing fetched at all
+}
 
 
 
@@ -621,11 +710,13 @@ int wmoWeatherCodeMapping(int code) {
   return 1;                          // Default -> clouds
 }
 
-void getOpenMeteoData() {
+bool getOpenMeteoData() {
   // Check WiFi connection first
   if (WiFi.status() != WL_CONNECTED) {
     Serial.println("Weather: WiFi not connected, skipping");
-    return;
+    weatherFailed = true;
+    failCount++;
+    return false;
   }
 
   HTTPClient http;
@@ -639,6 +730,10 @@ void getOpenMeteoData() {
       WEATHER_LATITUDE, WEATHER_LONGITUDE);
 
   http.begin(url);  // Use plain HTTP - Open-Meteo supports it
+  // Bounded, so a hung attempt cannot eat into the 60s watchdog. Retries are the
+  // caller's job (see loop() in main.cpp) - this function makes exactly one attempt.
+  http.setConnectTimeout(WEATHER_HTTP_TIMEOUT_MS);
+  http.setTimeout(WEATHER_HTTP_TIMEOUT_MS);
 
   int httpCode = http.GET();
   if (httpCode != 200) {
@@ -647,7 +742,7 @@ void getOpenMeteoData() {
     weatherFailed = true;
     failCount++;
     http.end();
-    return;
+    return false;
   }
 
   String payload = http.getString();
@@ -669,13 +764,11 @@ void getOpenMeteoData() {
 
   http.end();
 
-  if (weatherFailed && failCount > 3) {
-    delay(5000);
-    logStatusMessage("Weather trying again");
-    getOpenMeteoData();
-  }
-
-  if (weatherFailed) return;
+  // The old code retried here, recursively, behind a blocking delay(5000) - and only
+  // once failCount exceeded 3, which a single call can never reach, so in practice a
+  // failed fetch was simply left until the next hourly refresh. Retries now live in
+  // loop() on a short backoff, where they cannot block the watchdog feed.
+  if (weatherFailed) return false;
 
   // Populate the variables from Open-Meteo response
   JsonArray temps_max = doc["daily"]["temperature_2m_max"];
@@ -693,6 +786,11 @@ void getOpenMeteoData() {
     minTemp[i] = round(temps_min[i].as<double>());
     maxTemp[i] = round(temps_max[i].as<double>());
   }
+
+  weatherDataEpoch = nowEpochIfValid();
+  weatherSuccessMillis = millis();
+  saveWeatherCache();
+  return true;
 }
 
 /* Start of code to get data from openweathermap - based on work by https://github.com/lefty01 

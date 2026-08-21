@@ -25,13 +25,14 @@ void displayTodaysTempRange() {
   dma_display->fillRect(TEMPRANGE_X, TEMPRANGE_Y - 5, TEMPRANGE_WIDTH, TEMPRANGE_HEIGHT, 0);
   dma_display->setTextSize(1);     // size 1 == 8 pixels high
   dma_display->setTextWrap(false); // Don't wrap at end of line - will do ourselves
-  dma_display->setTextColor(TEMPRANGE_COLOR);
+  uint16_t rangeColor = weatherStale() ? WEATHER_STALE_COLOR : TEMPRANGE_COLOR;
+  dma_display->setTextColor(rangeColor);
   dma_display->setFont(&TomThumb);
   dma_display->setCursor(TEMPRANGE_X, TEMPRANGE_Y);
   dma_display->printf("%3d/%3d  F", minTempToday, maxTempToday);
 
   // Draw the degree symbol manually
-  dma_display->fillRect(TEMPRANGE_X + 24, TEMPRANGE_Y - 5, 2, 2, TEMPRANGE_COLOR);
+  dma_display->fillRect(TEMPRANGE_X + 24, TEMPRANGE_Y - 5, 2, 2, rangeColor);
   dma_display->setFont();
 }
 

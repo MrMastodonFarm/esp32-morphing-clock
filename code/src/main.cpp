@@ -33,6 +33,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 unsigned long prevEpoch;
 unsigned long lastNTPUpdate;
 unsigned long lastWeatherUpdate;
+unsigned long weatherRetryMs = 1000UL * WEATHER_RETRY_MIN_SEC;  // current backoff while weatherFailed
 unsigned long lastDisplayUpdate;
 
 //Just a blinking heart to show the main thread is still alive...
@@ -139,10 +140,25 @@ void setup(){
   lastNTPUpdate = millis();
   logStatusMessage("NTP done!");
 
+  // WL_CONNECTED means associated, not usable: DHCP and DNS can still be settling,
+  // and a fetch fired at that instant is exactly the one that fails. Wait for a lease.
+  {
+    unsigned long t0 = millis();
+    while (WiFi.localIP() == INADDR_NONE && millis() - t0 < WIFI_IP_WAIT_MS) {
+      delay(250);
+    }
+  }
+
   logStatusMessage("Getting weather...");
-  getOpenMeteoData();
+  if (getOpenMeteoData()) {
+    logStatusMessage("Weather recvd!");
+  } else if (loadWeatherCache()) {
+    // Draw the last good forecast; loop() keeps retrying on the short backoff.
+    logStatusMessage("Weather: cached");
+  } else {
+    logStatusMessage("Weather retry soon");
+  }
   lastWeatherUpdate = millis();
-  logStatusMessage("Weather recvd!");
 
   logStatusMessage("MQTT connect...");
 
@@ -262,13 +278,22 @@ void loop() {
     lastNTPUpdate = millis();
   }
 
-  // Periodically refresh weather forecast
-  if (millis() - lastWeatherUpdate > 1000 * WEATHER_REFRESH_INTERVAL_SEC) {
-    logStatusMessage("Weather refresh");
-    getOpenMeteoData();
-    yield();  // Allow WiFi/MQTT processing after HTTP request
-    displayWeatherData();
-    lastWeatherUpdate = millis();
+  // Periodically refresh weather forecast - hourly after a success, on a short
+  // doubling backoff (WEATHER_RETRY_MIN_SEC..MAX) while the last attempt failed.
+  {
+    unsigned long interval = weatherFailed ? weatherRetryMs : 1000UL * WEATHER_REFRESH_INTERVAL_SEC;
+    if (millis() - lastWeatherUpdate > interval) {
+      logStatusMessage(weatherFailed ? "Weather retry" : "Weather refresh");
+      if (getOpenMeteoData()) {
+        weatherRetryMs = 1000UL * WEATHER_RETRY_MIN_SEC;
+      } else {
+        weatherRetryMs = min(weatherRetryMs * 2, 1000UL * WEATHER_RETRY_MAX_SEC);
+        Serial.printf("Weather: next attempt in %lus\n", weatherRetryMs / 1000);
+      }
+      yield();  // Allow WiFi/MQTT processing after HTTP request
+      displayWeatherData();
+      lastWeatherUpdate = millis();
+    }
   }
 
   //Do we need to clear the status message from the screen?

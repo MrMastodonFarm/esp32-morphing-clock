@@ -25,7 +25,11 @@ void drawWeatherIcon16(int startx, int starty, uint8_t icon);
 void drawHeartBeat();
 void drawBitmap(int startx, int starty, int width, int height, uint32_t *bitmap);
 void drawBitmap(int startx, int starty, int width, int height, uint32_t *bitmap, bool enlarged);
-void getOpenMeteoData();
+bool getOpenMeteoData();     // one attempt; true on success (sets weatherFailed either way)
+bool loadWeatherCache();     // restore the last good forecast from NVS; false if none/too old
+bool weatherStale();         // data on the panel is older than WEATHER_STALE_AFTER_SEC (or undatable)
+extern bool weatherFailed;
+extern uint32_t weatherDataEpoch;  // epoch of the forecast currently shown, 0 = unknown
 
 // Moon phase functions
 uint8_t getMoonPhase();

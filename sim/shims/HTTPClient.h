@@ -27,6 +27,8 @@ inline void sim_set_http_fixture(const char *path) {
 class HTTPClient {
 public:
   void begin(const char *) {}
+  void setConnectTimeout(int) {}
+  void setTimeout(int) {}
   int GET() const { return 200; }
   String getString() const { return String(sim_http_fixture); }
   void end() {}

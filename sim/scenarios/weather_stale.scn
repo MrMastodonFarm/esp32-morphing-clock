@@ -1,0 +1,15 @@
+# Forecast stale: the weather fetch has been failing long enough that the data on the
+# panel is older than WEATHER_STALE_AFTER_SEC (or came from the NVS cache at boot).
+# The temp-range line turns the error colour; everything else is live.
+time         2026-08-07 19:42:00
+temp         88.5
+humidity     61
+sensor_dead  false
+weather_stale true
+trains       4 12 19 27
+bluetrains   2 9 16 24
+event        Beach trip
+event_days   12
+flight       AA123
+flight_dest  MI
+weather      fixtures/open-meteo-summer.json

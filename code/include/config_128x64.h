@@ -152,6 +152,8 @@
 #define TEMPRANGE_WIDTH 36
 #define TEMPRANGE_HEIGHT 8
 #define TEMPRANGE_COLOR ((0x00 & 0xF8) << 8) | ((0xFF & 0xFC) << 3) | (0xFF >> 3)
+// Temp-range line when the forecast is stale (see weatherStale()). Same red as a dead outdoor sensor.
+#define WEATHER_STALE_COLOR MESSAGE_LINE_1_ERROR_COLOR
 
 //Sunrise and sunset, flanking today's weather icon (rise on the left, set on the right).
 //These fill the only two gaps either side of the 16x16 icon, and 13px is exactly one

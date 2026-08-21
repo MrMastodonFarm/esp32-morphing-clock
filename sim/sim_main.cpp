@@ -27,6 +27,7 @@ struct Scenario {
   float temp = 88.5F;
   int humidity = 61;
   bool sensorDead = false;
+  bool weatherStale = false;
   // Feels-like as pushed in over MQTT. Unset means "no feed", which is how the device
   // behaves before the first message and what makes displaySensorData() fall back to
   // computing a heat index locally.
@@ -175,6 +176,14 @@ Scenario loadScenario(const std::string &path) {
         } else {
           throw std::runtime_error("sensor_dead must be true or false");
         }
+      } else if (key == "weather_stale") {
+        if (value == "true") {
+          scenario.weatherStale = true;
+        } else if (value == "false") {
+          scenario.weatherStale = false;
+        } else {
+          throw std::runtime_error("weather_stale must be true or false");
+        }
       } else if (key == "trains") {
         scenario.trains = parseTrains(value, key);
       } else if (key == "bluetrains") {
@@ -270,6 +279,10 @@ void drawScene(const Scenario &scenario, std::optional<uint8_t> icon = {}) {
 
   sim_set_http_fixture(scenario.weather.c_str());
   getOpenMeteoData();
+  if (scenario.weatherStale) {
+    // Backdate the fetch so weatherStale() trips: "the feed has been dead for days".
+    weatherDataEpoch = 1600000001;
+  }
   if (icon.has_value()) {
     for (std::size_t i = 0; i < 5; ++i) {
       forecast5Days[i] = *icon;

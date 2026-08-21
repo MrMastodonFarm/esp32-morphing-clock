@@ -94,6 +94,21 @@
 
 // How often to refresh weather forecast data
 #define WEATHER_REFRESH_INTERVAL_SEC 3600
+// After a failed fetch, retry on a doubling backoff between these bounds instead of
+// waiting out the full hour. The first fetch right after WiFi associates often fails
+// (DHCP/DNS not settled yet) and used to leave the forecast blank for an hour.
+#define WEATHER_RETRY_MIN_SEC 30
+#define WEATHER_RETRY_MAX_SEC 300
+// Per-attempt connect/read timeout. Must stay well inside WDT_TIMEOUT.
+#define WEATHER_HTTP_TIMEOUT_MS 8000
+// A cold boot whose first fetch fails may draw the forecast cached in NVS, but only if
+// it is younger than this; older than that a blank is more honest.
+#define WEATHER_CACHE_MAX_AGE_HOURS 12
+// Forecast older than this (cached or simply not refreshed) draws its temp-range line
+// in WEATHER_STALE_COLOR. Three missed hourly refreshes.
+#define WEATHER_STALE_AFTER_SEC (3 * 3600)
+// How long setup() waits for a DHCP lease before the first fetch.
+#define WIFI_IP_WAIT_MS 10000
 
 // Open-Meteo location (Alexandria, VA)
 #define WEATHER_LATITUDE "38.8048"
